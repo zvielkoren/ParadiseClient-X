@@ -8,7 +8,7 @@ import net.paradise_client.Constants;
 import net.paradise_client.themes.AbstractThemeRenderer;
 
 /**
- * Glassmorphism theme
+ * Glassmorphism theme with translucent, frosted glass effects, soft shadows, and animations
  */
 public class GlassmorphismThemeRenderer extends AbstractThemeRenderer {
   private static final int GLASS_BASE = 0x88FFFFFF;
@@ -110,7 +110,7 @@ public class GlassmorphismThemeRenderer extends AbstractThemeRenderer {
     int glassColor = active ? 0xAAFFFFFF : 0x88FFFFFF;
     context.fill(x, y, x + width, y + height, glassColor);
     drawVerticalGradient(context, x + 1, y + 1, width - 2, height - 2, 0x44FFFFFF, GLASS_SHADOW);
-    float pulse = (float) Math.sin(animationFrame * 0.08) * 0.15f + 0.85f;
+    float pulse = (float) Math.sin(animationFrame * 0.08) * 0.15f + 0.85f; // Pulsing glow
     int glowColor = (int) (pulse * 0x44) << 24 | (ACCENT_COLOR & 0xFFFFFF);
     context.fill(x - 1, y - 1, x + width + 1, y + height + 1, glowColor);
     int textX = x + (width - font.getWidth(title)) / 2;
