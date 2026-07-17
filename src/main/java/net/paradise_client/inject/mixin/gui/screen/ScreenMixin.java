@@ -1,8 +1,8 @@
 package net.paradise_client.inject.mixin.gui.screen;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * @since 1.9
  */
 @Mixin(Screen.class) public abstract class ScreenMixin {
-  @Shadow protected MinecraftClient client;
+  @Shadow protected Minecraft minecraft;
 
   /**
    * Injects custom background rendering into the renderBackground method. This method draws a custom texture for
@@ -28,16 +28,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
    * @param ci      The callback information for the method.
    */
   @Inject(method = "renderBackground", at = @At(value = "HEAD"), cancellable = true) private void renderBackground(
-    DrawContext context,
+    GuiGraphics context,
     int mouseX,
     int mouseY,
     float delta,
     CallbackInfo ci) {
-    if (this.client.world == null) {
-      this.renderPanoramaBackground(context, delta);
+    if (this.minecraft.level == null) {
+      this.renderPanorama(context, delta);
     }
     ci.cancel();
   }
 
-  @Shadow protected abstract void renderPanoramaBackground(DrawContext context, float deltaTicks);
+  @Shadow protected abstract void renderPanorama(GuiGraphics context, float deltaTicks);
 }

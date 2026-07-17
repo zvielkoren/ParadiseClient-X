@@ -1,10 +1,12 @@
 package net.paradise_client.screen;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.*;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.StringWidget;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 import net.paradise_client.*;
 import net.paradise_client.mod.BungeeSpoofMod;
 
@@ -22,27 +24,27 @@ public class UUIDSpoofScreen extends Screen {
 
   private final BungeeSpoofMod bungeeSpoofMod = ParadiseClient.BUNGEE_SPOOF_MOD;
   private final Screen parentScreen;
-  private final MinecraftClient minecraftClient = MinecraftClient.getInstance();
+  private final Minecraft minecraftClient = Minecraft.getInstance();
 
   private String status;
-  private TextFieldWidget bungeeUsernameField;
-  private TextFieldWidget bungeeFakeUsernameField;
-  private TextFieldWidget bungeeTokenField;
-  private ButtonWidget premiumButton;
+  private EditBox bungeeUsernameField;
+  private EditBox bungeeFakeUsernameField;
+  private EditBox bungeeTokenField;
+  private Button premiumButton;
   private int currentHeight;
 
   public UUIDSpoofScreen(Screen parentScreen) {
-    super(Text.literal("UUID Spoof"));
+    super(Component.literal("UUID Spoof"));
     this.parentScreen = parentScreen;
   }
 
-  @Override public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+  @Override public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
     this.renderBackground(context, mouseX, mouseY, delta);
     super.render(context, mouseX, mouseY, delta);
-    context.drawCenteredTextWithShadow(this.textRenderer, this.status, this.width / 2, 20, 0xFFFFFF);
+    context.drawCenteredString(this.font, this.status, this.width / 2, 20, 0xFFFFFF);
   }
 
-  @Override public void close() {
+  @Override public void onClose() {
     minecraftClient.setScreen(parentScreen);
   }
 
@@ -65,57 +67,57 @@ public class UUIDSpoofScreen extends Screen {
       widgetXOffset,
       button -> togglePremium());
     addButton("Spoof", widgetWidth, widgetXOffset, button -> spoof());
-    addButton("Exit", widgetWidth, widgetXOffset, button -> close());
+    addButton("Exit", widgetWidth, widgetXOffset, button -> onClose());
   }
 
-  @Override public void resize(MinecraftClient client, int width, int height) {
-    String username = this.bungeeUsernameField.getText();
-    String fakeUsername = this.bungeeFakeUsernameField.getText();
-    String token = this.bungeeTokenField.getText();
+  @Override public void resize(Minecraft client, int width, int height) {
+    String username = this.bungeeUsernameField.getValue();
+    String fakeUsername = this.bungeeFakeUsernameField.getValue();
+    String token = this.bungeeTokenField.getValue();
     this.init(client, width, height);
-    this.bungeeUsernameField.setText(username);
-    this.bungeeFakeUsernameField.setText(fakeUsername);
-    this.bungeeTokenField.setText(token);
+    this.bungeeUsernameField.setValue(username);
+    this.bungeeFakeUsernameField.setValue(fakeUsername);
+    this.bungeeTokenField.setValue(token);
   }
 
-  private TextFieldWidget addInputField(String label,
+  private EditBox addInputField(String label,
     String initialValue,
     java.util.function.Consumer<String> onTextChanged) {
     int widgetWidth = 200;
     int widgetXOffset = widgetWidth / 2;
     int tHeight = getNewHeight();
 
-    TextFieldWidget textField = new TextFieldWidget(this.textRenderer,
+    EditBox textField = new EditBox(this.font,
       this.width / 2 - widgetXOffset,
       tHeight,
       widgetWidth,
       20,
-      Text.literal(label));
+      Component.literal(label));
     textField.setMaxLength(256);
-    textField.setText(initialValue);
-    textField.setChangedListener(onTextChanged);
-    this.addSelectableChild(textField);
-    this.addDrawable(textField);
+    textField.setValue(initialValue);
+    textField.setResponder(onTextChanged);
+    this.addWidget(textField);
+    this.addRenderableOnly(textField);
 
-    this.addDrawable(new TextWidget(this.width / 2 - widgetXOffset,
+    this.addRenderableOnly(new StringWidget(this.width / 2 - widgetXOffset,
       tHeight - 15,
       widgetWidth,
       20,
-      Text.literal(label),
-      this.textRenderer));
+      Component.literal(label),
+      this.font));
 
     return textField;
   }
 
-  private ButtonWidget addButton(String label, int width, int xOffset, ButtonWidget.PressAction action) {
-    return this.addDrawableChild(ButtonWidget.builder(Text.literal(label), action)
-      .dimensions(this.width / 2 - xOffset, getNewHeight() - 10, width, 20)
+  private Button addButton(String label, int width, int xOffset, Button.OnPress action) {
+    return this.addRenderableWidget(Button.builder(Component.literal(label), action)
+      .bounds(this.width / 2 - xOffset, getNewHeight() - 10, width, 20)
       .build());
   }
 
   private void togglePremium() {
     bungeeSpoofMod.isUUIDOnline = !bungeeSpoofMod.isUUIDOnline;
-    premiumButton.setMessage(Text.literal(bungeeSpoofMod.isUUIDOnline ? "Premium" : "Cracked"));
+    premiumButton.setMessage(Component.literal(bungeeSpoofMod.isUUIDOnline ? "Premium" : "Cracked"));
   }
 
   private void spoof() {

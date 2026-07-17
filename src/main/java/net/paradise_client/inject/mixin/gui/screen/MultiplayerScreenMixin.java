@@ -1,15 +1,24 @@
 package net.paradise_client.inject.mixin.gui.screen;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.screen.*;
-import net.minecraft.client.gui.screen.multiplayer.*;
-import net.minecraft.client.gui.widget.*;
-import net.minecraft.client.network.*;
-import net.minecraft.client.option.ServerList;
-import net.minecraft.client.resource.language.I18n;
-import net.minecraft.screen.ScreenTexts;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.layouts.EqualSpacingLayout;
+import net.minecraft.client.gui.layouts.FrameLayout;
+import net.minecraft.client.gui.layouts.LinearLayout;
+import net.minecraft.client.gui.layouts.SpacerElement;
+import net.minecraft.client.gui.screens.ConfirmScreen;
+import net.minecraft.client.gui.screens.DirectJoinServerScreen;
+import net.minecraft.client.gui.screens.EditServerScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
+import net.minecraft.client.gui.screens.multiplayer.ServerSelectionList;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.client.multiplayer.ServerList;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.client.server.LanServerDetection;
+import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
 import net.paradise_client.ParadiseClient;
 import net.paradise_client.mod.BungeeSpoofMod;
 import net.paradise_client.screen.UUIDSpoofScreen;
@@ -24,198 +33,198 @@ import org.spongepowered.asm.mixin.*;
  * @author SpigotRCE
  * @since 1.0
  */
-@Mixin(MultiplayerScreen.class) public abstract class MultiplayerScreenMixin extends Screen {
+@Mixin(JoinMultiplayerScreen.class)
+public abstract class MultiplayerScreenMixin extends Screen {
 
   @Shadow @Final private static Logger LOGGER;
+
   /**
    * Reference to the BungeeSpoofMod instance for accessing mod data.
    */
   @Unique final BungeeSpoofMod bungeeSpoofMod = ParadiseClient.BUNGEE_SPOOF_MOD;
-  @Shadow protected MultiplayerServerListWidget serverListWidget;
-  @Unique ButtonWidget uuidSpoofButton;
+
+  @Shadow protected ServerSelectionList serverSelectionList;
+  @Unique Button uuidSpoofButton;
   /**
    * Button for toggling BungeeCord spoofing.
    */
-  @Unique ButtonWidget bungeeToggleButton;
+  @Unique Button bungeeToggleButton;
   /**
    * Text field for inputting BungeeCord IP.
    */
-  @Unique TextFieldWidget bungeeClientIPField;
+  @Unique EditBox bungeeClientIPField;
   /**
    * Button for toggling BungeeCord target hostname spoofing.
    */
-  @Unique ButtonWidget bungeeHostnameToggle;
+  @Unique Button bungeeHostnameToggle;
   /**
    * Text field for inputting BungeeCord target hostname.
    */
-  @Unique TextFieldWidget bungeeHostnameField;
-  /**
-   * Renderer for displaying text.
-   */
-  @Unique TextRenderer textRenderer;
-  @Shadow private boolean initialized;
-  @Shadow private ServerList serverList;
-  @Shadow private LanServerQueryManager.LanServerEntryList lanServers;
-  @Shadow @Nullable private LanServerQueryManager.LanServerDetector lanServerDetector;
-  @Shadow private ButtonWidget buttonJoin;
-  @Shadow private ServerInfo selectedEntry;
-  @Shadow private ButtonWidget buttonEdit;
-  @Shadow private ButtonWidget buttonDelete;
+  @Unique EditBox bungeeHostnameField;
+
+  @Shadow private boolean initedOnce;
+  @Shadow private ServerList servers;
+  @Shadow private LanServerDetection.LanServerList lanServerList;
+  @Shadow @Nullable private LanServerDetection.LanServerDetector lanServerDetector;
+  @Shadow private Button selectButton;
+  @Shadow private ServerData editingServer;
+  @Shadow private Button editButton;
+  @Shadow private Button deleteButton;
 
   /**
    * Constructor for MultiplayerScreenMixin.
    *
    * @param title The title of the screen.
    */
-  protected MultiplayerScreenMixin(Text title) {
+  protected MultiplayerScreenMixin(Component title) {
     super(title);
   }
 
   /**
-   * @author a
-   * @reason a
+   * @author SpigotRCE
+   * @reason Overwriting to append custom bungee and UUID layout options to the multiplayer screen footer.
    */
-  @Overwrite public void init() {
-    if (this.client == null) {
+  @Overwrite
+  public void init() {
+    if (this.minecraft == null) {
       return; // To shut Intellij up
     }
 
-    if (this.initialized) {
-      this.serverListWidget.setDimensionsAndPosition(this.width, this.height - 64 - 32, 0, 32);
+    if (this.initedOnce) {
+      this.serverSelectionList.setRectangle(this.width, this.height - 64 - 32, 0, 32);
     } else {
-      this.initialized = true;
-      this.serverList = new ServerList(this.client);
-      this.serverList.loadFile();
-      this.lanServers = new LanServerQueryManager.LanServerEntryList();
+      this.initedOnce = true;
+      this.servers = new ServerList(this.minecraft);
+      this.servers.load();
+      this.lanServerList = new LanServerDetection.LanServerList();
 
       try {
-        this.lanServerDetector = new LanServerQueryManager.LanServerDetector(this.lanServers);
+        this.lanServerDetector = new LanServerDetection.LanServerDetector(this.lanServerList);
         this.lanServerDetector.start();
       } catch (Exception exception) {
         LOGGER.warn("Unable to start LAN server detection: {}", exception.getMessage());
       }
 
-      this.serverListWidget =
-        new MultiplayerServerListWidget((MultiplayerScreen) MinecraftClient.getInstance().currentScreen,
-          this.client,
+      this.serverSelectionList =
+        new ServerSelectionList((JoinMultiplayerScreen) Minecraft.getInstance().screen,
+          this.minecraft,
           this.width,
           this.height - 64 - 32,
           32,
           36);
-      this.serverListWidget.setServers(this.serverList);
+      this.serverSelectionList.updateOnlineServers(this.servers);
     }
 
-    this.addDrawableChild(this.serverListWidget);
+    this.addRenderableWidget(this.serverSelectionList);
 
-    this.textRenderer = MinecraftClient.getInstance().textRenderer;
+    this.font = Minecraft.getInstance().font;
 
+    this.uuidSpoofButton = this.addRenderableWidget(Button.builder(Component.literal("UUIDSpoof"),
+      onPress -> Minecraft.getInstance().setScreen(new UUIDSpoofScreen(this))).width(100).build());
 
-    this.uuidSpoofButton = this.addDrawableChild(ButtonWidget.builder(Text.literal("UUIDSpoof"),
-      onPress -> MinecraftClient.getInstance().setScreen(new UUIDSpoofScreen(this))).width(100).build());
-
-    this.bungeeToggleButton = this.addDrawableChild(ButtonWidget.builder(getBungeeButtonText(), onPress -> {
+    this.bungeeToggleButton = this.addRenderableWidget(Button.builder(getBungeeButtonText(), onPress -> {
       this.bungeeSpoofMod.isIPForwarding = !bungeeSpoofMod.isIPForwarding;
       this.bungeeToggleButton.setMessage(getBungeeButtonText());
     }).width(100).build());
 
-    this.bungeeHostnameToggle = this.addDrawableChild(ButtonWidget.builder(getBungeeTargetButtonText(), onPress -> {
+    this.bungeeHostnameToggle = this.addRenderableWidget(Button.builder(getBungeeTargetButtonText(), onPress -> {
       this.bungeeSpoofMod.isHostnameForwarding = !bungeeSpoofMod.isHostnameForwarding;
       this.bungeeHostnameToggle.setMessage(getBungeeTargetButtonText());
     }).width(100).build());
 
-    this.bungeeClientIPField = new TextFieldWidget(this.textRenderer, 74, 20, Text.literal("Bungee IP"));
+    this.bungeeClientIPField = new EditBox(this.font, 74, 20, Component.literal("Bungee IP"));
     this.bungeeClientIPField.setMaxLength(128);
-    this.bungeeClientIPField.setText(bungeeSpoofMod.ip);
-    this.bungeeClientIPField.setChangedListener((text) -> bungeeSpoofMod.ip = this.bungeeClientIPField.getText());
-    this.addSelectableChild(this.bungeeClientIPField);
+    this.bungeeClientIPField.setValue(bungeeSpoofMod.ip);
+    this.bungeeClientIPField.setResponder((text) -> bungeeSpoofMod.ip = this.bungeeClientIPField.getValue());
+    this.addWidget(this.bungeeClientIPField);
 
-    this.bungeeHostnameField = new TextFieldWidget(this.textRenderer, 74, 20, Text.literal("Hostname"));
+    this.bungeeHostnameField = new EditBox(this.font, 74, 20, Component.literal("Hostname"));
     this.bungeeHostnameField.setMaxLength(128);
-    this.bungeeHostnameField.setText(bungeeSpoofMod.hostname);
-    this.bungeeHostnameField.setChangedListener((text) -> bungeeSpoofMod.hostname = this.bungeeHostnameField.getText());
-    this.addSelectableChild(this.bungeeHostnameField);
+    this.bungeeHostnameField.setValue(bungeeSpoofMod.hostname);
+    this.bungeeHostnameField.setResponder((text) -> bungeeSpoofMod.hostname = this.bungeeHostnameField.getValue());
+    this.addWidget(this.bungeeHostnameField);
 
-    this.buttonJoin =
-      this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectServer.select"), (button) -> this.connect())
+    this.selectButton =
+      this.addRenderableWidget(Button.builder(Component.translatable("selectServer.select"), (button) -> this.joinSelectedServer())
         .width(100)
         .build());
 
-    ButtonWidget buttonWidget =
-      this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectServer.direct"), (button) -> {
-        this.selectedEntry =
-          new ServerInfo(I18n.translate("selectServer.defaultName"), "", ServerInfo.ServerType.OTHER);
-        this.client.setScreen(new DirectConnectScreen(this, this::directConnect, this.selectedEntry));
+    Button buttonWidget =
+      this.addRenderableWidget(Button.builder(Component.translatable("selectServer.direct"), (button) -> {
+        this.editingServer =
+          new ServerData(I18n.get("selectServer.defaultName"), "", ServerData.Type.OTHER);
+        this.minecraft.setScreen(new DirectJoinServerScreen(this, this::directJoinCallback, this.editingServer));
       }).width(100).build());
 
-    ButtonWidget buttonWidget2 =
-      this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectServer.add"), (button) -> {
-        this.selectedEntry =
-          new ServerInfo(I18n.translate("selectServer.defaultName"), "", ServerInfo.ServerType.OTHER);
-        this.client.setScreen(new AddServerScreen(this, this::addEntry, this.selectedEntry));
+    Button buttonWidget2 =
+      this.addRenderableWidget(Button.builder(Component.translatable("selectServer.add"), (button) -> {
+        this.editingServer =
+          new ServerData(I18n.get("selectServer.defaultName"), "", ServerData.Type.OTHER);
+        this.minecraft.setScreen(new EditServerScreen(this, this::addServerCallback, this.editingServer));
       }).width(100).build());
 
-    this.buttonEdit = this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectServer.edit"), (button) -> {
-      MultiplayerServerListWidget.Entry entry = this.serverListWidget.getSelectedOrNull();
-      if (entry instanceof MultiplayerServerListWidget.ServerEntry) {
-        ServerInfo serverInfo = ((MultiplayerServerListWidget.ServerEntry) entry).getServer();
-        this.selectedEntry = new ServerInfo(serverInfo.name, serverInfo.address, ServerInfo.ServerType.OTHER);
-        this.selectedEntry.copyWithSettingsFrom(serverInfo);
-        this.client.setScreen(new AddServerScreen(this, this::editEntry, this.selectedEntry));
+    this.editButton = this.addRenderableWidget(Button.builder(Component.translatable("selectServer.edit"), (button) -> {
+      ServerSelectionList.Entry entry = this.serverSelectionList.getSelected();
+      if (entry instanceof ServerSelectionList.OnlineServerEntry) {
+        ServerData serverInfo = ((ServerSelectionList.OnlineServerEntry) entry).getServerData();
+        this.editingServer = new ServerData(serverInfo.name, serverInfo.ip, ServerData.Type.OTHER);
+        this.editingServer.copyFrom(serverInfo);
+        this.minecraft.setScreen(new EditServerScreen(this, this::editServerCallback, this.editingServer));
       }
     }).width(74).build());
 
-    this.buttonDelete =
-      this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectServer.delete"), (button) -> {
-        MultiplayerServerListWidget.Entry entry = this.serverListWidget.getSelectedOrNull();
-        if (entry instanceof MultiplayerServerListWidget.ServerEntry) {
-          String string = ((MultiplayerServerListWidget.ServerEntry) entry).getServer().name;
+    this.deleteButton =
+      this.addRenderableWidget(Button.builder(Component.translatable("selectServer.delete"), (button) -> {
+        ServerSelectionList.Entry entry = this.serverSelectionList.getSelected();
+        if (entry instanceof ServerSelectionList.OnlineServerEntry) {
+          String string = ((ServerSelectionList.OnlineServerEntry) entry).getServerData().name;
           if (string != null) {
-            Text text = Text.translatable("selectServer.deleteQuestion");
-            Text text2 = Text.translatable("selectServer.deleteWarning", string);
-            Text text3 = Text.translatable("selectServer.deleteButton");
-            Text text4 = ScreenTexts.CANCEL;
-            this.client.setScreen(new ConfirmScreen(this::removeEntry, text, text2, text3, text4));
+            Component text = Component.translatable("selectServer.deleteQuestion");
+            Component text2 = Component.translatable("selectServer.deleteWarning", string);
+            Component text3 = Component.translatable("selectServer.deleteButton");
+            Component text4 = CommonComponents.GUI_CANCEL;
+            this.minecraft.setScreen(new ConfirmScreen(this::deleteCallback, text, text2, text3, text4));
           }
         }
       }).width(74).build());
 
-    ButtonWidget buttonWidget3 =
-      this.addDrawableChild(ButtonWidget.builder(Text.translatable("selectServer.refresh"), (button) -> this.refresh())
+    Button buttonWidget3 =
+      this.addRenderableWidget(Button.builder(Component.translatable("selectServer.refresh"), (button) -> this.refreshServerList())
         .width(74)
         .build());
 
-    ButtonWidget buttonWidget4 =
-      this.addDrawableChild(ButtonWidget.builder(ScreenTexts.BACK, (button) -> this.close()).width(74).build());
+    Button buttonWidget4 =
+      this.addRenderableWidget(Button.builder(CommonComponents.GUI_BACK, (button) -> this.onClose()).width(74).build());
 
-    DirectionalLayoutWidget directionalLayoutWidget = DirectionalLayoutWidget.vertical();
+    LinearLayout directionalLayoutWidget = LinearLayout.vertical();
 
-    AxisGridWidget axisGridWidget =
-      directionalLayoutWidget.add(new AxisGridWidget(550, 20, AxisGridWidget.DisplayAxis.HORIZONTAL));
-    axisGridWidget.add(this.uuidSpoofButton);
-    axisGridWidget.add(this.buttonJoin);
-    axisGridWidget.add(buttonWidget);
-    axisGridWidget.add(buttonWidget2);
-    axisGridWidget.add(this.bungeeToggleButton);
+    EqualSpacingLayout axisGridWidget =
+      directionalLayoutWidget.addChild(new EqualSpacingLayout(550, 20, EqualSpacingLayout.Orientation.HORIZONTAL));
+    axisGridWidget.addChild(this.uuidSpoofButton);
+    axisGridWidget.addChild(this.selectButton);
+    axisGridWidget.addChild(buttonWidget);
+    axisGridWidget.addChild(buttonWidget2);
+    axisGridWidget.addChild(this.bungeeToggleButton);
 
-    directionalLayoutWidget.add(EmptyWidget.ofHeight(4));
+    directionalLayoutWidget.addChild(SpacerElement.height(4));
 
-    AxisGridWidget axisGridWidget2 =
-      directionalLayoutWidget.add(new AxisGridWidget(550, 20, AxisGridWidget.DisplayAxis.HORIZONTAL));
-    axisGridWidget2.add(this.bungeeClientIPField);
-    axisGridWidget2.add(this.buttonEdit);
-    axisGridWidget2.add(this.bungeeHostnameToggle);
-    axisGridWidget2.add(this.buttonDelete);
-    axisGridWidget2.add(buttonWidget3);
-    axisGridWidget2.add(buttonWidget4);
-    axisGridWidget2.add(this.bungeeHostnameField);
+    EqualSpacingLayout axisGridWidget2 =
+      directionalLayoutWidget.addChild(new EqualSpacingLayout(550, 20, EqualSpacingLayout.Orientation.HORIZONTAL));
+    axisGridWidget2.addChild(this.bungeeClientIPField);
+    axisGridWidget2.addChild(this.editButton);
+    axisGridWidget2.addChild(this.bungeeHostnameToggle);
+    axisGridWidget2.addChild(this.deleteButton);
+    axisGridWidget2.addChild(buttonWidget3);
+    axisGridWidget2.addChild(buttonWidget4);
+    axisGridWidget2.addChild(this.bungeeHostnameField);
 
-    directionalLayoutWidget.refreshPositions();
-    SimplePositioningWidget.setPos(directionalLayoutWidget, 0, this.height - 64, this.width, 64);
+    directionalLayoutWidget.arrangeElements();
+    FrameLayout.centerInRectangle(directionalLayoutWidget, 0, this.height - 64, this.width, 64);
 
-    this.addDrawable(this.bungeeClientIPField); // right now, minecraft fucks up adding TextFieldWidget to AxisGridWidget
-    this.addDrawable(this.bungeeHostnameField); // same as line 313
+    this.addRenderableOnly(this.bungeeClientIPField);
+    this.addRenderableOnly(this.bungeeHostnameField);
 
-    this.updateButtonActivationStates();
+    this.onSelectedChange();
   }
 
   /**
@@ -223,8 +232,8 @@ import org.spongepowered.asm.mixin.*;
    *
    * @return The text to display on the BungeeCord button.
    */
-  @Unique private Text getBungeeButtonText() {
-    return bungeeSpoofMod.isIPForwarding ? Text.literal("Bungee Enabled") : Text.literal("Bungee Disabled");
+  @Unique private Component getBungeeButtonText() {
+    return bungeeSpoofMod.isIPForwarding ? Component.literal("Bungee Enabled") : Component.literal("Bungee Disabled");
   }
 
   /**
@@ -232,21 +241,21 @@ import org.spongepowered.asm.mixin.*;
    *
    * @return The text to display on the BungeeCord target hostname button.
    */
-  @Unique private Text getBungeeTargetButtonText() {
-    return bungeeSpoofMod.isHostnameForwarding ? Text.literal("Hostname Enabled") : Text.literal("Hostname Disabled");
+  @Unique private Component getBungeeTargetButtonText() {
+    return bungeeSpoofMod.isHostnameForwarding ? Component.literal("Hostname Enabled") : Component.literal("Hostname Disabled");
   }
 
-  @Shadow public abstract void connect();
+  @Shadow public abstract void joinSelectedServer();
 
-  @Shadow protected abstract void directConnect(boolean confirmedAction);
+  @Shadow protected abstract void directJoinCallback(boolean confirmedAction);
 
-  @Shadow protected abstract void addEntry(boolean confirmedAction);
+  @Shadow protected abstract void addServerCallback(boolean confirmedAction);
 
-  @Shadow protected abstract void editEntry(boolean confirmedAction);
+  @Shadow protected abstract void editServerCallback(boolean confirmedAction);
 
-  @Shadow protected abstract void removeEntry(boolean confirmedAction);
+  @Shadow protected abstract void deleteCallback(boolean confirmedAction);
 
-  @Shadow protected abstract void refresh();
+  @Shadow protected abstract void refreshServerList();
 
-  @Shadow protected abstract void updateButtonActivationStates();
+  @Shadow protected abstract void onSelectedChange();
 }

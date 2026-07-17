@@ -1,12 +1,15 @@
 package net.paradise_client.inject.mixin.network.connection;
 
-import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.network.encryption.NetworkEncryptionUtils;
-import net.minecraft.network.message.*;
-import net.minecraft.network.packet.c2s.play.ChatMessageC2SPacket;
-import net.minecraft.network.packet.s2c.play.GameJoinS2CPacket;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.world.World;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.chat.LastSeenMessagesTracker;
+import net.minecraft.network.chat.MessageSignature;
+import net.minecraft.network.chat.SignedMessageBody;
+import net.minecraft.network.chat.SignedMessageChain;
+import net.minecraft.network.protocol.game.ClientboundLoginPacket;
+import net.minecraft.network.protocol.game.ServerboundChatPacket;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.util.Crypt;
+import net.minecraft.world.level.Level;
 import net.paradise_client.*;
 import net.paradise_client.event.bus.EventBus;
 import net.paradise_client.event.impl.chat.*;
@@ -26,12 +29,12 @@ import java.time.Instant;
  * @author SpigotRCE
  * @since 2.17
  */
-@Mixin(ClientPlayNetworkHandler.class)
+@Mixin(ClientPacketListener.class)
 public abstract class ClientPlayNetworkHandlerMixin implements ClientPlayNetworkHandlerAccessor {
 
-  @Shadow private LastSeenMessagesCollector lastSeenMessagesCollector;
+  @Shadow private LastSeenMessagesTracker lastSeenMessages;
 
-  @Shadow private MessageChain.Packer messagePacker;
+  @Shadow private SignedMessageChain.Encoder signedMessageEncoder;
 
   /**
    * Injects code at the end of the onGameJoin method to update connection status and server IP.
@@ -43,7 +46,7 @@ public abstract class ClientPlayNetworkHandlerMixin implements ClientPlayNetwork
    * @param packet The game join packet received from the server.
    * @param info   The callback information.
    */
-  @Inject(method = "onGameJoin", at = @At("TAIL")) private void onGameJoin(GameJoinS2CPacket packet,
+  @Inject(method = "handleLogin", at = @At("TAIL")) private void onGameJoin(ClientboundLoginPacket packet,
     CallbackInfo info) {
     ParadiseClient.NETWORK_MOD.isConnected = true;
 
@@ -56,13 +59,13 @@ public abstract class ClientPlayNetworkHandlerMixin implements ClientPlayNetwork
 
     Helper.printChatMessage("");
     Helper.printChatMessage("&b&l[World Info]");
-    Helper.printChatMessage("&7 - Dimension: &f" + packet.commonPlayerSpawnInfo().dimension().getValue());
+    Helper.printChatMessage("&7 - Dimension: &f" + packet.commonPlayerSpawnInfo().dimension().location());
     Helper.printChatMessage("&7 - Hashed Seed: &f" + packet.commonPlayerSpawnInfo().seed());
 
     Helper.printChatMessage("");
     Helper.printChatMessage("&b&l[Server Dimensions]");
-    for (RegistryKey<World> dimension : packet.dimensionIds()) {
-      Helper.printChatMessage("&7 - &f" + dimension.getValue());
+    for (ResourceKey<Level> dimension : packet.levels()) {
+      Helper.printChatMessage("&7 - &f" + dimension.location());
     }
 
     Helper.printChatMessage("");
@@ -70,7 +73,7 @@ public abstract class ClientPlayNetworkHandlerMixin implements ClientPlayNetwork
     Helper.printChatMessage("&7 - Secure Chat: " + (packet.enforcesSecureChat() ? "&aEnabled" : "&cDisabled"));
     Helper.printChatMessage("&7 - Hardcore Mode: " + (packet.hardcore() ? "&aEnabled" : "&cDisabled"));
     Helper.printChatMessage("&7 - Max Players: &f" + packet.maxPlayers());
-    Helper.printChatMessage("&7 - Render Distance: &f" + packet.viewDistance());
+    Helper.printChatMessage("&7 - Render Distance: &f" + packet.chunkRadius());
     Helper.printChatMessage("&7 - Simulation Distance: &f" + packet.simulationDistance());
 
     Helper.printChatMessage("&8&m-----------------------------------------------------", false);
@@ -82,7 +85,7 @@ public abstract class ClientPlayNetworkHandlerMixin implements ClientPlayNetwork
    * @param content The content entered by the player.
    * @param ci      The callback information.
    */
-  @Inject(method = "sendChatMessage", at = @At("HEAD"), cancellable = true)
+  @Inject(method = "sendChat", at = @At("HEAD"), cancellable = true)
   private void onSendChatMessageH(String content, CallbackInfo ci) {
 
     EventBus.ListenerContext<ChatPreEvent> ctx = EventBus.CHAT_PRE_EVENT_CHANNEL.fire(new ChatPreEvent(content));
@@ -96,7 +99,7 @@ public abstract class ClientPlayNetworkHandlerMixin implements ClientPlayNetwork
 
     if (content.startsWith(ParadiseClient.COMMAND_MANAGER.prefix)) {
       ParadiseClient.COMMAND_MANAGER.dispatch(content.substring(1));
-      ParadiseClient.MINECRAFT_CLIENT.inGameHud.getChatHud().addToMessageHistory(content);
+      ParadiseClient.MINECRAFT_CLIENT.gui.getChat().addRecentChat(content);
       ci.cancel();
     }
   }
@@ -107,7 +110,7 @@ public abstract class ClientPlayNetworkHandlerMixin implements ClientPlayNetwork
    * @param content The content entered by the player.
    * @param ci      The callback information.
    */
-  @Inject(method = "sendChatMessage", at = @At("TAIL")) private void onSendChatMessageT(String content,
+  @Inject(method = "sendChat", at = @At("TAIL")) private void onSendChatMessageT(String content,
     CallbackInfo ci) {
     EventBus.fire(EventBus.CHAT_POST_EVENT_CHANNEL, new ChatPostEvent(content));
   }
@@ -119,10 +122,10 @@ public abstract class ClientPlayNetworkHandlerMixin implements ClientPlayNetwork
    */
   @Override public void paradiseClient$sendChatMessage(String message) {
     Instant instant = Instant.now();
-    long l = NetworkEncryptionUtils.SecureRandomUtil.nextLong();
-    LastSeenMessagesCollector.LastSeenMessages lastSeenMessages = this.lastSeenMessagesCollector.collect();
-    MessageSignatureData messageSignatureData =
-      this.messagePacker.pack(new MessageBody(message, instant, l, lastSeenMessages.lastSeen()));
-    Helper.sendPacket(new ChatMessageC2SPacket(message, instant, l, messageSignatureData, lastSeenMessages.update()));
+    long l = Crypt.SaltSupplier.getLong();
+    LastSeenMessagesTracker.Update lastSeenMessages = this.lastSeenMessages.generateAndApplyUpdate();
+    MessageSignature messageSignatureData =
+      this.signedMessageEncoder.pack(new SignedMessageBody(message, instant, l, lastSeenMessages.lastSeen()));
+    Helper.sendPacket(new ServerboundChatPacket(message, instant, l, messageSignatureData, lastSeenMessages.update()));
   }
 }

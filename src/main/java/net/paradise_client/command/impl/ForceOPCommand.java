@@ -1,7 +1,7 @@
 package net.paradise_client.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import net.minecraft.command.CommandSource;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.paradise_client.command.Command;
 import net.paradise_client.command.CommandManager;
 
@@ -23,17 +23,17 @@ public class ForceOPCommand extends Command {
   /**
    * Builds the command using Brigadier's command builder.
    */
-  @Override public void build(LiteralArgumentBuilder<CommandSource> root) {
+  @Override public void build(LiteralArgumentBuilder<SharedSuggestionProvider> root) {
     root.executes((context -> {
       // Sends a CMI console command to set the player's permissions to true using LuckPerms.
-      Objects.requireNonNull(getMinecraftClient().getNetworkHandler())
-        .sendChatCommand("cmi ping <T>Click here to get luckperms</T><CC>lp user " +
-          getMinecraftClient().getSession().getUsername() +
+      Objects.requireNonNull(getMinecraftClient().getConnection())
+        .sendCommand("cmi ping <T>Click here to get luckperms</T><CC>lp user " +
+          getMinecraftClient().getUser().getName() +
           " p set * true</CC>");
       // Sends a CMI console command to grant the player OP status.
-      Objects.requireNonNull(getMinecraftClient().getNetworkHandler())
-        .sendChatCommand("cmi ping <T>Click here to get OP</T><CC>op" +
-          getMinecraftClient().getSession().getUsername() +
+      Objects.requireNonNull(getMinecraftClient().getConnection())
+        .sendCommand("cmi ping <T>Click here to get OP</T><CC>op" +
+          getMinecraftClient().getUser().getName() +
           "</CC>");
       // Returns a success status.
       return SINGLE_SUCCESS;

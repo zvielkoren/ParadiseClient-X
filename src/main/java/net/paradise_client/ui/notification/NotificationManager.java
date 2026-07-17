@@ -1,9 +1,8 @@
 package net.paradise_client.ui.notification;
 
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-
 import java.util.*;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
 
 public class NotificationManager {
   private final List<Notification> notifications = new ArrayList<>();
@@ -12,7 +11,7 @@ public class NotificationManager {
     notifications.add(notification);
   }
 
-  public void drawNotifications(DrawContext ctx, TextRenderer tr) {
+  public void drawNotifications(GuiGraphics ctx, Font tr) {
     for (int i = 0; i < notifications.size(); i++) {
       Notification n = notifications.get(i);
       if (n.draw(ctx, tr, i)) {

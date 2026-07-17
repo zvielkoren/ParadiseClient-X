@@ -1,7 +1,7 @@
 package net.paradise_client.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import net.minecraft.command.CommandSource;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.paradise_client.Helper;
 import net.paradise_client.command.Command;
 import net.paradise_client.command.CommandManager;
@@ -29,7 +29,7 @@ public class CopyCommand extends Command {
    * Builds the command structure using Brigadier's LiteralArgumentBuilder. The command has two sub-commands: "tellraw"
    * and the default command.
    */
-  @Override public void build(LiteralArgumentBuilder<CommandSource> root) {
+  @Override public void build(LiteralArgumentBuilder<SharedSuggestionProvider> root) {
     root.then(literal("tellraw").executes((context) -> {
       // Copies a specific tellraw message to the clipboard.
       StringSelection stringSelection = new StringSelection(

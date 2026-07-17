@@ -1,8 +1,8 @@
 package net.paradise_client.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import net.minecraft.command.CommandSource;
-import net.minecraft.text.Text;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.network.chat.Component;
 import net.paradise_client.Helper;
 import net.paradise_client.command.Command;
 import net.paradise_client.command.CommandManager;
@@ -27,11 +27,11 @@ public class PlayersCommand extends Command {
   /**
    * Builds the command using Brigadier library.
    */
-  @Override public void build(LiteralArgumentBuilder<CommandSource> root) {
+  @Override public void build(LiteralArgumentBuilder<SharedSuggestionProvider> root) {
     root.executes((context) -> {
       Map<String, PlayerData> playerDataMap = new HashMap<>();
 
-      getMinecraftClient().getNetworkHandler().getPlayerList().forEach(playerInfo -> {
+      getMinecraftClient().getConnection().getOnlinePlayers().forEach(playerInfo -> {
         String playerName = playerInfo.getProfile().getName();
         String playerUUID = playerInfo.getProfile().getId().toString();
         String playerGamemode = playerInfo.getGameMode().name();
@@ -41,10 +41,10 @@ public class PlayersCommand extends Command {
       });
 
       if (playerDataMap.isEmpty()) {
-        getMinecraftClient().player.sendMessage(Helper.parseColoredText("No players"), true);
+        getMinecraftClient().player.displayClientMessage(Helper.parseColoredText("No players"), true);
       }
 
-      playerDataMap.forEach((name, playerData) -> getMinecraftClient().player.sendMessage(playerData.getMessage(),
+      playerDataMap.forEach((name, playerData) -> getMinecraftClient().player.displayClientMessage(playerData.getMessage(),
         false));
       return SINGLE_SUCCESS;
     });
@@ -79,13 +79,13 @@ public class PlayersCommand extends Command {
      *
      * @return The formatted message.
      */
-    public Text getMessage() {
-      Text nameText = Helper.parseColoredText("&7" + name);
-      Text uuidText = Helper.parseColoredText(" &8[&bCopy UUID&8]", uuid);
-      Text gamemodeText =
+    public Component getMessage() {
+      Component nameText = Helper.parseColoredText("&7" + name);
+      Component uuidText = Helper.parseColoredText(" &8[&bCopy UUID&8]", uuid);
+      Component gamemodeText =
         Helper.parseColoredText(" &8(" + getGameModeColor() + Helper.capitalizeFirstLetter(gameMode) + "&8)");
-      Text pingText = Helper.parseColoredText(" &8(&a" + ping + "ms&8)");
-      return Text.empty().append(nameText).append(uuidText).append(gamemodeText).append(pingText);
+      Component pingText = Helper.parseColoredText(" &8(&a" + ping + "ms&8)");
+      return Component.empty().append(nameText).append(uuidText).append(gamemodeText).append(pingText);
     }
 
     /**

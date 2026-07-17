@@ -1,14 +1,15 @@
 package net.paradise_client;
 
 import net.minecraft.network.*;
+import net.minecraft.network.protocol.PacketFlow;
 
 public class NetworkConfiguration {
-  public NetworkPhase phase;
-  public NetworkSide side;
+  public ConnectionProtocol phase;
+  public PacketFlow side;
   public int protocolVersion;
   public long lastPacket;
 
-  public void set(NetworkPhase phase, NetworkSide side, int protocolVersion) {
+  public void set(ConnectionProtocol phase, PacketFlow side, int protocolVersion) {
     this.phase = phase;
     this.side = side;
     this.protocolVersion = protocolVersion;

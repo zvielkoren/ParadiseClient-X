@@ -2,7 +2,7 @@ package net.paradise_client.discord;
 
 import net.arikia.dev.drpc.*;
 import net.arikia.dev.drpc.callbacks.ReadyCallback;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import net.paradise_client.*;
 
 import java.util.concurrent.*;
@@ -17,7 +17,7 @@ import java.util.concurrent.*;
  * @author 1nstagram
  */
 public class DiscordRPCManager implements ReadyCallback {
-  private final MinecraftClient client;
+  private final Minecraft client;
   private final RichPresenceUpdater richPresenceUpdater;
   private boolean enabled = true;
   private ScheduledExecutorService executorService;
@@ -25,7 +25,7 @@ public class DiscordRPCManager implements ReadyCallback {
   private boolean wasInGame = false;
   private boolean wasPaused = false;
 
-  public DiscordRPCManager(MinecraftClient client) {
+  public DiscordRPCManager(Minecraft client) {
     this.client = client;
     this.richPresenceUpdater = new RichPresenceUpdater();
     this.lastGameState = null;

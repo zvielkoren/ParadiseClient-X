@@ -3,7 +3,7 @@ package net.paradise_client.netty;
 import io.netty.buffer.*;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
-import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.paradise_client.*;
 import net.paradise_client.event.bus.EventBus;
 import net.paradise_client.event.impl.network.message.*;
@@ -16,7 +16,7 @@ import java.util.*;
 
 public class ParadiseS2CPluginMessageHandler extends MessageToMessageDecoder<ByteBuf> {
   @Override protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-    PacketByteBuf b = Helper.byteBufToPacketBuf(ctx.alloc().buffer().writeBytes(in));
+    FriendlyByteBuf b = Helper.byteBufToPacketBuf(ctx.alloc().buffer().writeBytes(in));
 
     Protocol protocol = Helper.getBungeeProtocolForCurrentPhase();
 
@@ -30,7 +30,7 @@ public class ParadiseS2CPluginMessageHandler extends MessageToMessageDecoder<Byt
         notifyChannels(message);
 
         EventBus.ListenerContext<PluginMessageEvent> context = EventBus.fire(EventBus.PLUGIN_MESSAGE_EVENT_CHANNEL,
-          new PluginMessageEvent(message.getTag(), new PacketByteBuf(Unpooled.buffer().writeBytes(message.getData()))));
+          new PluginMessageEvent(message.getTag(), new FriendlyByteBuf(Unpooled.buffer().writeBytes(message.getData()))));
 
         if (context.isCancelled()) {
           return;
@@ -43,7 +43,7 @@ public class ParadiseS2CPluginMessageHandler extends MessageToMessageDecoder<Byt
 
   private void notifyChannels(PluginMessagePacket message) {
     String channelName = message.getTag();
-    PacketByteBuf buf = Helper.byteBufToPacketBuf(Unpooled.buffer().writeBytes(message.getData()));
+    FriendlyByteBuf buf = Helper.byteBufToPacketBuf(Unpooled.buffer().writeBytes(message.getData()));
 
     Helper.printChatMessage("&8&m-----------------------------------------------------", false);
     if (Objects.equals(channelName, "minecraft:register") || Objects.equals(channelName, "REGISTER")) {

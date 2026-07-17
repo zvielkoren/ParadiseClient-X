@@ -4,12 +4,11 @@ import net.fabricmc.api.*;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ChatScreen;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.paradise_client.addon.AddonLoader;
 import net.paradise_client.command.CommandManager;
 import net.paradise_client.config.Config;
@@ -23,6 +22,7 @@ import org.lwjgl.glfw.*;
 import org.lwjgl.system.MemoryStack;
 
 import javax.imageio.ImageIO;
+import com.mojang.blaze3d.platform.InputConstants;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
@@ -40,7 +40,7 @@ import java.util.Objects;
  */
 public class ParadiseClient implements ModInitializer, ClientModInitializer {
 
-  public static final MinecraftClient MINECRAFT_CLIENT = MinecraftClient.getInstance();
+  public static final Minecraft MINECRAFT_CLIENT = Minecraft.getInstance();
   public static final NetworkConfiguration NETWORK_CONFIGURATION = new NetworkConfiguration();
   public static ParadiseClient INSTANCE;
   public static BungeeSpoofMod BUNGEE_SPOOF_MOD;
@@ -79,7 +79,7 @@ public class ParadiseClient implements ModInitializer, ClientModInitializer {
   private void updateIcon() {
     MINECRAFT_CLIENT.execute(() -> {
       try (MemoryStack stack = MemoryStack.stackPush()) {
-        long windowHandle = MINECRAFT_CLIENT.getWindow().getHandle();
+        long windowHandle = MINECRAFT_CLIENT.getWindow().getWindow();
 
         GLFWImage.Buffer icons = GLFWImage.malloc(2, stack);
 
@@ -121,13 +121,13 @@ public class ParadiseClient implements ModInitializer, ClientModInitializer {
   }
 
   private void setupKeyBindings() {
-    KeyBinding keyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding("Open paradise command",
-      InputUtil.Type.KEYSYM,
+    KeyMapping keyBinding = KeyBindingHelper.registerKeyBinding(new KeyMapping("Open paradise command",
+      InputConstants.Type.KEYSYM,
       GLFW.GLFW_KEY_COMMA,
       Constants.MOD_NAME));
 
     ClientTickEvents.END_CLIENT_TICK.register(client -> {
-      while (keyBinding.wasPressed()) {
+      while (keyBinding.consumeClick()) {
         client.setScreen(new ChatScreen(COMMAND_MANAGER.prefix));
       }
     });
@@ -191,7 +191,7 @@ public class ParadiseClient implements ModInitializer, ClientModInitializer {
   public void registerChannel(String channelName) {
     String nameSpace = channelName.split(":")[0];
     String id = channelName.split(":")[1];
-    PayloadTypeRegistry.playC2S().register(new CustomPayload.Id<>(Identifier.of(nameSpace, id)), DummyPacket.CODEC);
+    PayloadTypeRegistry.playC2S().register(new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(nameSpace, id)), DummyPacket.CODEC);
   }
 
   @Override public void onInitialize() {

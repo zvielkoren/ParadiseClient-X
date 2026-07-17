@@ -1,12 +1,10 @@
 package net.paradise_client.inject.mixin.gui.screen;
 
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.multiplayer.DirectConnectScreen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.DirectJoinServerScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 import net.paradise_client.util.IPUtil;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -17,9 +15,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.concurrent.CompletableFuture;
 
-@Mixin(DirectConnectScreen.class)
+@Mixin(DirectJoinServerScreen.class)
 public abstract class DirectConnectScreenMixin extends Screen {
-    @Shadow private TextFieldWidget addressField;
+    @Shadow private EditBox ipEdit;
     
     @Unique
     private IPUtil.IPInfo ipInfo;
@@ -28,13 +26,13 @@ public abstract class DirectConnectScreenMixin extends Screen {
     @Unique
     private String lastAddress = "";
 
-    protected DirectConnectScreenMixin(Text title) {
+    protected DirectConnectScreenMixin(Component title) {
         super(title);
     }
 
     @Inject(method = "init", at = @At("TAIL"))
     private void onInit(CallbackInfo ci) {
-        lastAddress = addressField.getText();
+        lastAddress = ipEdit.getValue();
         if (!lastAddress.isEmpty()) {
             updateIPInfo();
         }
@@ -62,8 +60,8 @@ public abstract class DirectConnectScreenMixin extends Screen {
     }
 
     @Inject(method = "render", at = @At("TAIL"))
-    private void onRender(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        String currentAddress = addressField.getText();
+    private void onRender(GuiGraphics context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        String currentAddress = ipEdit.getValue();
         if (!currentAddress.equals(lastAddress)) {
             lastAddress = currentAddress;
             updateIPInfo();
@@ -83,8 +81,8 @@ public abstract class DirectConnectScreenMixin extends Screen {
         drawInfo(context, "Country Code", ipInfo == null ? "Unknown" : ipInfo.countryCode, x, y + 96);
     }
 
-    private void drawInfo(DrawContext context, String label, String value, int x, int y) {
+    private void drawInfo(GuiGraphics context, String label, String value, int x, int y) {
         String displayValue = loading ? "§cLoading..." : "§c" + value;
-        context.drawTextWithShadow(this.textRenderer, label + " » " + displayValue, x, y, 0xFFFFFF);
+        context.drawString(this.font, label + " » " + displayValue, x, y, 0xFFFFFF);
     }
 }

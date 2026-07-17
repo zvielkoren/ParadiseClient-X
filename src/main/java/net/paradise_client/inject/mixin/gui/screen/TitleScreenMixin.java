@@ -1,13 +1,17 @@
 package net.paradise_client.inject.mixin.gui.screen;
 
-import net.minecraft.client.MinecraftClient;
+import com.mojang.realmsclient.gui.screens.RealmsNotificationsScreen;
+import net.minecraft.Util;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.*;
-import net.minecraft.client.gui.screen.*;
-import net.minecraft.client.gui.widget.*;
-import net.minecraft.client.realms.gui.screen.RealmsNotificationsScreen;
-import net.minecraft.text.Text;
-import net.minecraft.util.Util;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.LogoRenderer;
+import net.minecraft.client.gui.components.PlainTextButton;
+import net.minecraft.client.gui.components.SplashRenderer;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 import net.paradise_client.*;
 import net.paradise_client.wallpaper.*;
 import org.jetbrains.annotations.Nullable;
@@ -30,39 +34,39 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
   /**
    * The splash text renderer used to display splash texts on the Title Screen.
    */
-  @Nullable @Shadow private SplashTextRenderer splashText;
+  @Nullable @Shadow private SplashRenderer splash;
 
   /**
    * The Realms Notifications Screen displayed on the Title Screen if active.
    */
-  @Nullable @Shadow private RealmsNotificationsScreen realmsNotificationGui;
+  @Nullable @Shadow private RealmsNotificationsScreen realmsNotificationsScreen;
 
   /**
    * Alpha value for the background fade effect on the Title Screen.
    */
-  @Mutable @Shadow private float backgroundAlpha;
+  @Mutable @Shadow private float panoramaFade;
 
   /**
    * Flag indicating whether the background fade effect is enabled.
    */
-  @Mutable @Shadow private boolean doBackgroundFade;
+  @Mutable @Shadow private boolean fading;
 
   /**
    * The start time for the background fade effect, in milliseconds.
    */
-  @Mutable @Shadow private long backgroundFadeStart;
+  @Mutable @Shadow private long fadeInStart;
 
   /**
    * The logo drawer used to render the logo on the Title Screen.
    */
-  @Final @Shadow private LogoDrawer logoDrawer;
+  @Final @Shadow private LogoRenderer logoRenderer;
 
   /**
    * Constructs a new instance of the TitleScreenMixin.
    *
    * @param title The title of the screen.
    */
-  protected TitleScreenMixin(Text title) {
+  protected TitleScreenMixin(Component title) {
     super(title);
   }
 
@@ -73,35 +77,35 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
    * @param ci Callback information.
    */
   @Inject(method = "init", at = @At(value = "TAIL")) public void init(CallbackInfo ci) {
-    Text updateMessage1 = Helper.parseColoredText("&2Current version: &1" +
+    Component updateMessage1 = Helper.parseColoredText("&2Current version: &1" +
       Constants.VERSION +
       " &2Latetst version: &1" +
       ParadiseClient.MISC_MOD.latestVersion +
       " &fClick to download");
     if (ParadiseClient.MISC_MOD.isClientOutdated) {
-      this.addDrawableChild(new PressableTextWidget(this.width - this.textRenderer.getWidth(updateMessage1) - 2,
+      this.addRenderableWidget(new PlainTextButton(this.width - this.font.width(updateMessage1) - 2,
         this.height - 20,
-        this.textRenderer.getWidth(updateMessage1),
+        this.font.width(updateMessage1),
         10,
         updateMessage1,
         (button) -> {
-          Util.getOperatingSystem().open("https://paradise-client.net/downloads");
-          MinecraftClient.getInstance().setScreen(new TitleScreen());
+          Util.getPlatform().openUri("https://paradise-client.net/downloads");
+          Minecraft.getInstance().setScreen(new TitleScreen());
         },
-        this.textRenderer));
+        this.font));
     }
 
     // Adding a button to switch themes dynamically
     // This button toggles between "hack" and "particle" themes
     Theme currentTheme = ThemeRenderer.getTheme();
 
-    this.addDrawableChild(ButtonWidget.builder(Text.literal("Theme: " + currentTheme.getName()), onPress -> {
+    this.addRenderableWidget(Button.builder(Component.literal("Theme: " + currentTheme.getName()), onPress -> {
       Theme[] themes = Theme.values();
       int nextOrdinal = (ThemeRenderer.getTheme().ordinal() + 1) % themes.length;
       Theme nextTheme = themes[nextOrdinal];
       ThemeRenderer.setTheme(nextTheme);
-      onPress.setMessage(Text.literal("Theme: " + nextTheme.getName()));
-    }).width(150).position(this.width / 2 - 75, this.height / 4 + 160).build());
+      onPress.setMessage(Component.literal("Theme: " + nextTheme.getName()));
+    }).width(150).pos(this.width / 2 - 75, this.height / 4 + 160).build());
 
   }
 
@@ -115,43 +119,43 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
    * @param delta   The delta time since the last frame.
    * @param ci      Callback information.
    */
-  @Inject(method = "render", at = @At("HEAD"), cancellable = true) public void render(DrawContext context,
+  @Inject(method = "render", at = @At("HEAD"), cancellable = true) public void render(GuiGraphics context,
     int mouseX,
     int mouseY,
     float delta,
     CallbackInfo ci) {
-    if (this.backgroundFadeStart == 0L && this.doBackgroundFade) {
-      this.backgroundFadeStart = Util.getMeasuringTimeMs();
+    if (this.fadeInStart == 0L && this.fading) {
+      this.fadeInStart = Util.getMillis();
     }
 
     float f = 1.0F;
-    if (this.doBackgroundFade) {
-      float g = (float) (Util.getMeasuringTimeMs() - this.backgroundFadeStart) / 2000.0F;
+    if (this.fading) {
+      float g = (float) (Util.getMillis() - this.fadeInStart) / 2000.0F;
       if (g > 1.0F) {
-        this.doBackgroundFade = false;
-        this.backgroundAlpha = 1.0F;
+        this.fading = false;
+        this.panoramaFade = 1.0F;
       } else {
-        g = MathHelper.clamp(g, 0.0F, 1.0F);
-        f = MathHelper.clampedMap(g, 0.5F, 1.0F, 0.0F, 1.0F);
-        this.backgroundAlpha = MathHelper.clampedMap(g, 0.0F, 0.5F, 0.0F, 1.0F);
+        g = Mth.clamp(g, 0.0F, 1.0F);
+        f = Mth.clampedMap(g, 0.5F, 1.0F, 0.0F, 1.0F);
+        this.panoramaFade = Mth.clampedMap(g, 0.0F, 0.5F, 0.0F, 1.0F);
       }
 
-      this.setWidgetAlpha(f);
+      this.fadeWidgets(f);
     }
 
-    this.renderPanoramaBackground(context, delta);
-    int i = MathHelper.ceil(f * 255.0F) << 24;
+    this.renderPanorama(context, delta);
+    int i = Mth.ceil(f * 255.0F) << 24;
     if ((i & -67108864) != 0) {
       super.render(context, mouseX, mouseY, delta);
-      this.logoDrawer.draw(context, this.width, f);
-      if (this.splashText != null) {
-        if (!(Boolean) this.client.options.getHideSplashTexts().getValue()) {
-          this.splashText.render(context, this.width, this.textRenderer, i);
+      this.logoRenderer.renderLogo(context, this.width, f);
+      if (this.splash != null) {
+        if (!(Boolean) this.minecraft.options.hideSplashTexts().get()) {
+          this.splash.render(context, this.width, this.font, i);
         }
       }
-      context.drawTextWithShadow(this.textRenderer, Constants.windowTitle, 2, this.height - 10, 16777215 | i);
-      if (this.isRealmsNotificationsGuiDisplayed() && f >= 1.0F) {
-        this.realmsNotificationGui.render(context, mouseX, mouseY, delta);
+      context.drawString(this.font, Constants.windowTitle, 2, this.height - 10, 16777215 | i);
+      if (this.realmsNotificationsEnabled() && f >= 1.0F) {
+        this.realmsNotificationsScreen.render(context, mouseX, mouseY, delta);
       }
     }
     super.render(context, mouseX, mouseY, delta);
@@ -163,7 +167,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
    *
    * @param alpha The alpha value to set.
    */
-  @Shadow private void setWidgetAlpha(float alpha) {
+  @Shadow private void fadeWidgets(float alpha) {
   }
 
   /**
@@ -171,7 +175,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
    *
    * @return True if the Realms Notifications GUI is displayed, false otherwise.
    */
-  @Shadow private boolean isRealmsNotificationsGuiDisplayed() {
+  @Shadow private boolean realmsNotificationsEnabled() {
     return false;
   }
 }

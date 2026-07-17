@@ -1,6 +1,6 @@
 package net.paradise_client.inject.mixin.minecraft;
 
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import net.paradise_client.Constants;
 import net.paradise_client.event.bus.EventBus;
 import net.paradise_client.event.impl.minecraft.ClientShutdownEvent;
@@ -18,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.callback.*;
  * @author SpigotRCE
  * @since 1.0
  */
-@Mixin(MinecraftClient.class) public class MinecraftClientMixin {
+@Mixin(Minecraft.class) public class MinecraftClientMixin {
 
   /**
    * Injects code to modify the window title returned by the getWindowTitle method.
@@ -28,7 +28,7 @@ import org.spongepowered.asm.mixin.injection.callback.*;
    *
    * @param callback Callback information for the return value.
    */
-  @Inject(method = "getWindowTitle",
+  @Inject(method = "createTitle",
     at = @At(value = "INVOKE",
       target = "Ljava/lang/StringBuilder;append(Ljava/lang/String;)Ljava/lang/StringBuilder;",
       ordinal = 1),

@@ -3,8 +3,8 @@ package net.paradise_client.command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.command.CommandSource;
+import net.minecraft.client.Minecraft;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.paradise_client.*;
 import net.paradise_client.command.impl.*;
 
@@ -32,12 +32,12 @@ public class CommandManager {
     }
   }
 
-  public final CommandDispatcher<CommandSource> DISPATCHER = new CommandDispatcher<>();
+  public final CommandDispatcher<SharedSuggestionProvider> DISPATCHER = new CommandDispatcher<>();
   public final String prefix = ",";
   private final ArrayList<Command> commands = new ArrayList<>();
-  private final MinecraftClient minecraftClient;
+  private final Minecraft minecraftClient;
 
-  public CommandManager(MinecraftClient minecraftClient) {
+  public CommandManager(Minecraft minecraftClient) {
     this.minecraftClient = minecraftClient;
   }
 
@@ -63,7 +63,7 @@ public class CommandManager {
 
   public void register(Command command) {
     this.commands.add(command);
-    LiteralArgumentBuilder<CommandSource> node = Command.literal(command.getName());
+    LiteralArgumentBuilder<SharedSuggestionProvider> node = Command.literal(command.getName());
     command.build(node);
     DISPATCHER.register(node);
     Constants.LOGGER.info("Registered command: {}", command.getName());
@@ -98,7 +98,7 @@ public class CommandManager {
 
   private void dispatchCommand(String message) {
     try {
-      DISPATCHER.execute(message, minecraftClient.getNetworkHandler().getCommandSource());
+      DISPATCHER.execute(message, minecraftClient.getConnection().getSuggestionsProvider());
     } catch (CommandSyntaxException e) {
       Helper.printChatMessage("§c" + e.getMessage());
     }

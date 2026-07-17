@@ -1,7 +1,7 @@
 package net.paradise_client.config;
 
 import dev.dejvokep.boostedyaml.YamlDocument;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import net.paradise_client.Constants;
 import net.paradise_client.wallpaper.Theme;
 
@@ -11,7 +11,7 @@ public class Config extends ConfigProvider {
   private Theme theme = Theme.LEGACY;
 
   public Config() {
-    super("config.yml", "config-version", new File(MinecraftClient.getInstance().runDirectory, "paradiseclient"));
+    super("config.yml", "config-version", new File(Minecraft.getInstance().gameDirectory, "paradiseclient"));
     try {
       load();
     } catch (IOException e) {

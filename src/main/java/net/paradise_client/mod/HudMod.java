@@ -1,8 +1,7 @@
 package net.paradise_client.mod;
 
-import net.minecraft.client.MinecraftClient;
-
 import java.util.ArrayList;
+import net.minecraft.client.Minecraft;
 
 /**
  * Manages the HUD (Heads-Up Display) settings.
@@ -36,8 +35,8 @@ public class HudMod {
    *
    * @return True if connected to a server, false otherwise.
    */
-  public boolean isConnectedToServer(MinecraftClient client) {
-    return client.getNetworkHandler() != null && client.getCurrentServerEntry() != null;
+  public boolean isConnectedToServer(Minecraft client) {
+    return client.getConnection() != null && client.getCurrentServer() != null;
   }
 
   /**
@@ -47,8 +46,8 @@ public class HudMod {
    *
    * @return A string representing the server status.
    */
-  public String getServerStatus(MinecraftClient client) {
-    String address = client.getCurrentServerEntry().address;
+  public String getServerStatus(Minecraft client) {
+    String address = client.getCurrentServer().ip;
     return showServerIP ? "Connected to: " + address : "Connected to: HIDDEN";
   }
 }

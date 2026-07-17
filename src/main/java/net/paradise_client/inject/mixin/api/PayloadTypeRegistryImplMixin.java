@@ -1,10 +1,10 @@
 package net.paradise_client.inject.mixin.api;
 
 import net.fabricmc.fabric.impl.networking.PayloadTypeRegistryImpl;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.paradise_client.inject.accessor.PayloadTypeRegistryImplAccessor;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.*;
@@ -14,16 +14,16 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Mixin(PayloadTypeRegistryImpl.class)
-public abstract class PayloadTypeRegistryImplMixin<B extends PacketByteBuf> implements PayloadTypeRegistryImplAccessor {
-  @Shadow(remap = false) @Final private Map<Identifier, CustomPayload.Type<B, ? extends CustomPayload>> packetTypes;
+public abstract class PayloadTypeRegistryImplMixin<B extends FriendlyByteBuf> implements PayloadTypeRegistryImplAccessor {
+  @Shadow(remap = false) @Final private Map<ResourceLocation, CustomPacketPayload.TypeAndCodec<B, ? extends CustomPacketPayload>> packetTypes;
 
   @Inject(method = "register", at = @At(value = "RETURN"))
-  public <T extends CustomPayload> void register(CustomPayload.Id<T> id,
-    PacketCodec<? super B, T> codec,
-    CallbackInfoReturnable<CustomPayload.Type<? super B, T>> cir) {
+  public <T extends CustomPacketPayload> void register(CustomPacketPayload.Type<T> id,
+    StreamCodec<? super B, T> codec,
+    CallbackInfoReturnable<CustomPacketPayload.TypeAndCodec<? super B, T>> cir) {
   }
 
   @Override public ArrayList<String> paradiseClient$getRegisteredChannelsByName() {
-    return packetTypes.keySet().stream().map(Identifier::toString).collect(Collectors.toCollection(ArrayList::new));
+    return packetTypes.keySet().stream().map(ResourceLocation::toString).collect(Collectors.toCollection(ArrayList::new));
   }
 }

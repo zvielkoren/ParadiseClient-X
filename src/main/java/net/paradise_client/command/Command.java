@@ -4,9 +4,9 @@ import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.builder.*;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.*;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.command.CommandSource;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.paradise_client.Helper;
 
 import java.util.concurrent.CompletableFuture;
@@ -30,16 +30,16 @@ public abstract class Command {
     this.async = async;
   }
 
-  protected static LiteralArgumentBuilder<CommandSource> literal(final String name) {
+  protected static LiteralArgumentBuilder<SharedSuggestionProvider> literal(final String name) {
     return LiteralArgumentBuilder.literal(name);
   }
 
-  protected static <T> RequiredArgumentBuilder<CommandSource, T> argument(final String name,
+  protected static <T> RequiredArgumentBuilder<SharedSuggestionProvider, T> argument(final String name,
                                                                           final ArgumentType<T> type) {
     return RequiredArgumentBuilder.argument(name, type);
   }
 
-  public abstract void build(LiteralArgumentBuilder<CommandSource> root);
+  public abstract void build(LiteralArgumentBuilder<SharedSuggestionProvider> root);
 
   public CompletableFuture<Suggestions> suggestOnlinePlayers(CommandContext<?> ctx, SuggestionsBuilder builder) {
     String partialName;
@@ -50,25 +50,25 @@ public abstract class Command {
     }
 
     if (partialName.isEmpty()) {
-      getMinecraftClient().getNetworkHandler()
-              .getPlayerList()
+      getMinecraftClient().getConnection()
+              .getOnlinePlayers()
               .forEach(playerListEntry -> builder.suggest(playerListEntry.getProfile().getName()));
       return builder.buildFuture();
     }
 
     String finalPartialName = partialName;
-    getMinecraftClient().getNetworkHandler()
-            .getPlayerList()
+    getMinecraftClient().getConnection()
+            .getOnlinePlayers()
             .stream()
-            .map(PlayerListEntry::getProfile)
+            .map(PlayerInfo::getProfile)
             .filter(player -> player.getName().toLowerCase().startsWith(finalPartialName.toLowerCase()))
             .forEach(profile -> builder.suggest(profile.getName()));
 
     return builder.buildFuture();
   }
 
-  public MinecraftClient getMinecraftClient() {
-    return MinecraftClient.getInstance();
+  public Minecraft getMinecraftClient() {
+    return Minecraft.getInstance();
   }
 
   public int incompleteCommand(CommandContext<?> context) {

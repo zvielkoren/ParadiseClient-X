@@ -1,9 +1,12 @@
 package net.paradise_client.discord;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.*;
-import net.minecraft.client.gui.screen.multiplayer.*;
-import net.minecraft.client.gui.screen.world.SelectWorldScreen;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ConnectScreen;
+import net.minecraft.client.gui.screens.DisconnectedScreen;
+import net.minecraft.client.gui.screens.PauseScreen;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
+import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.paradise_client.ParadiseClient;
 
 /**
@@ -23,7 +26,7 @@ public class GameState {
    *
    * @return Detailed state string with server information when applicable
    */
-  public static String getDetailedGameState(MinecraftClient client) {
+  public static String getDetailedGameState(Minecraft client) {
     State state = getGameStateEnum(client);
 
     switch (state) {
@@ -36,8 +39,8 @@ public class GameState {
         break;
       case IN_GAME_SINGLEPLAYER:
       case PAUSED_SINGLEPLAYER:
-        if (client.world != null && client.world.getRegistryKey() != null) {
-          String worldName = client.world.getRegistryKey().getValue().toString();
+        if (client.level != null && client.level.dimension() != null) {
+          String worldName = client.level.dimension().location().toString();
           return state.getDisplayName() + " - " + worldName;
         }
         break;
@@ -55,24 +58,24 @@ public class GameState {
    *
    * @return The State enum representing the current game state
    */
-  public static State getGameStateEnum(MinecraftClient client) {
-    if (client.currentScreen != null) {
-      if (client.currentScreen instanceof TitleScreen) {
+  public static State getGameStateEnum(Minecraft client) {
+    if (client.screen != null) {
+      if (client.screen instanceof TitleScreen) {
         return State.MAIN_MENU;
       }
-      if (client.currentScreen instanceof MultiplayerScreen) {
+      if (client.screen instanceof JoinMultiplayerScreen) {
         return State.MULTIPLAYER;
       }
-      if (client.currentScreen instanceof SelectWorldScreen) {
+      if (client.screen instanceof SelectWorldScreen) {
         return State.SINGLEPLAYER;
       }
-      if (client.currentScreen instanceof GameMenuScreen) {
-        return client.getCurrentServerEntry() != null ? State.PAUSED_MULTIPLAYER : State.PAUSED_SINGLEPLAYER;
+      if (client.screen instanceof PauseScreen) {
+        return client.getCurrentServer() != null ? State.PAUSED_MULTIPLAYER : State.PAUSED_SINGLEPLAYER;
       }
-      if (client.currentScreen instanceof DisconnectedScreen) {
+      if (client.screen instanceof DisconnectedScreen) {
         return State.DISCONNECTED;
       }
-      if (client.currentScreen instanceof ConnectScreen) {
+      if (client.screen instanceof ConnectScreen) {
         return State.CONNECTING;
       }
 
@@ -89,7 +92,7 @@ public class GameState {
       return State.IN_GAME_MULTIPLAYER;
     }
 
-    if (client.isInSingleplayer()) {
+    if (client.isLocalServer()) {
       return State.IN_GAME_SINGLEPLAYER;
     }
 
@@ -103,7 +106,7 @@ public class GameState {
    *
    * @return true if the player is actively playing, false otherwise
    */
-  public static boolean isInGame(MinecraftClient client) {
+  public static boolean isInGame(Minecraft client) {
     State state = getGameStateEnum(client);
     return state == State.IN_GAME_MULTIPLAYER || state == State.IN_GAME_SINGLEPLAYER;
   }
@@ -115,7 +118,7 @@ public class GameState {
    *
    * @return true if the game is paused, false otherwise
    */
-  public static boolean isPaused(MinecraftClient client) {
+  public static boolean isPaused(Minecraft client) {
     State state = getGameStateEnum(client);
     return state == State.PAUSED_MULTIPLAYER || state == State.PAUSED_SINGLEPLAYER;
   }

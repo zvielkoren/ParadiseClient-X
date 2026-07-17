@@ -1,8 +1,8 @@
 package net.paradise_client.ui.notification;
 
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.util.Mth;
 
 public class Notification {
   private static final int PADDING_X = 10;
@@ -29,11 +29,11 @@ public class Notification {
     this.startTime = System.currentTimeMillis();
   }
 
-  public boolean draw(DrawContext ctx, TextRenderer tr, int slot) {
+  public boolean draw(GuiGraphics ctx, Font tr, int slot) {
     long elapsed = System.currentTimeMillis() - startTime;
 
-    float pLife = MathHelper.clamp(elapsed / (float) LIFETIME, 0f, 1f);
-    float pSlideIn = easeOutCubic(MathHelper.clamp(elapsed / (float) SLIDE_MS, 0f, 1f));
+    float pLife = Mth.clamp(elapsed / (float) LIFETIME, 0f, 1f);
+    float pSlideIn = easeOutCubic(Mth.clamp(elapsed / (float) SLIDE_MS, 0f, 1f));
 
     float alphaMul;
     if (elapsed < SLIDE_MS) {
@@ -45,13 +45,13 @@ public class Notification {
       alphaMul = 1f;
     }
 
-    int titleW = tr.getWidth(title);
-    int msgW = tr.getWidth(message);
+    int titleW = tr.width(title);
+    int msgW = tr.width(message);
     int width = Math.min(Math.max(titleW, msgW) + PADDING_X * 2, MAX_WIDTH);
-    int height = tr.fontHeight * 2 + PADDING_Y * 3 + BAR_HEIGHT;
+    int height = tr.lineHeight * 2 + PADDING_Y * 3 + BAR_HEIGHT;
 
-    int screenW = ctx.getScaledWindowWidth();
-    int screenH = ctx.getScaledWindowHeight();
+    int screenW = ctx.guiWidth();
+    int screenH = ctx.guiHeight();
 
     @SuppressWarnings("") int startX = screenW;
     int endX = screenW - width - 8;
@@ -82,11 +82,11 @@ public class Notification {
     ctx.fill(x + 2, y + 2, x + width + 2, y + height + 2, shadow);
 
     ctx.fill(x, y, x + width, y + height - BAR_HEIGHT, bg);
-    ctx.drawBorder(x, y, width, height - BAR_HEIGHT, border);
+    ctx.renderOutline(x, y, width, height - BAR_HEIGHT, border);
 
     int txtClr = argb(alphaMul, 0xFFFFFF);
-    ctx.drawText(tr, title, x + PADDING_X, y + PADDING_Y, txtClr, false);
-    ctx.drawText(tr, message, x + PADDING_X, y + PADDING_Y + tr.fontHeight + 2, txtClr, false);
+    ctx.drawString(tr, title, x + PADDING_X, y + PADDING_Y, txtClr, false);
+    ctx.drawString(tr, message, x + PADDING_X, y + PADDING_Y + tr.lineHeight + 2, txtClr, false);
 
     float barFrac = 1f - pLife;
     int barW = (int) (width * barFrac);

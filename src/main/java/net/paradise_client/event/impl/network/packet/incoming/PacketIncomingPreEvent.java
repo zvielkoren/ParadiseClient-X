@@ -1,6 +1,6 @@
 package net.paradise_client.event.impl.network.packet.incoming;
 
-import net.minecraft.network.packet.Packet;
+import net.minecraft.network.protocol.Packet;
 
 @SuppressWarnings("unused") public class PacketIncomingPreEvent {
   private Packet<?> packet;

@@ -3,11 +3,13 @@ package net.paradise_client;
 import com.google.common.io.*;
 import com.google.gson.*;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.*;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.text.*;
-import net.minecraft.util.Formatting;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.protocol.Packet;
 import net.paradise_client.inject.accessor.ClientConnectionAccessor;
 import net.paradise_client.protocol.Protocol;
 import net.paradise_client.protocol.packet.AbstractPacket;
@@ -17,8 +19,8 @@ import net.paradise_client.ui.notification.Notification;
 import java.awt.*;
 import java.io.*;
 import java.net.*;
-import java.util.List;
 import java.util.*;
+import java.util.List;
 
 /**
  * Utility class providing various helper methods for Minecraft client operations.
@@ -56,21 +58,21 @@ public class Helper {
   }
 
   public static void printChatMessage(String message, boolean dropTitle) {
-    printChatMessage(Text.of(parseColoredText(dropTitle ? appendPrefix(message) : message)));
+    printChatMessage(Component.translationArg(parseColoredText(dropTitle ? appendPrefix(message) : message)));
   }
 
-  public static void printChatMessage(Text message) {
+  public static void printChatMessage(Component message) {
     ParadiseClient.MISC_MOD.delayedMessages.add(message);
   }
 
   /**
-   * Parses a string message into a colored {@link Text} object.
+   * Parses a string message into a colored {@link Component} object.
    *
    * @param message The message to be parsed.
    *
-   * @return The formatted {@link Text} object.
+   * @return The formatted {@link Component} object.
    */
-  public static Text parseColoredText(String message) {
+  public static Component parseColoredText(String message) {
     return parseColoredText(message, null);
   }
 
@@ -79,17 +81,17 @@ public class Helper {
   }
 
   /**
-   * Parses a string message into a colored {@link Text} object with an optional click-to-copy action.
+   * Parses a string message into a colored {@link Component} object with an optional click-to-copy action.
    *
    * @param message     The message to be parsed.
    * @param copyMessage The message to copy to the clipboard when clicked, or {@code null} for no action.
    *
-   * @return The formatted {@link Text} object.
+   * @return The formatted {@link Component} object.
    */
-  public static Text parseColoredText(String message, String copyMessage) {
-    MutableText text = Text.literal("");
+  public static Component parseColoredText(String message, String copyMessage) {
+    MutableComponent text = Component.literal("");
     String[] parts = message.split("(?=&)");
-    List<Formatting> currentFormats = new ArrayList<>();
+    List<ChatFormatting> currentFormats = new ArrayList<>();
 
     for (String part : parts) {
       if (part.isEmpty()) {
@@ -99,16 +101,16 @@ public class Helper {
         currentFormats.add(getColorFromCode(part.substring(0, 2)));
         String remaining = part.substring(2);
         if (!remaining.isEmpty()) {
-          MutableText formattedText = Text.literal(remaining);
-          for (Formatting format : currentFormats) {
-            formattedText = formattedText.formatted(format);
+          MutableComponent formattedText = Component.literal(remaining);
+          for (ChatFormatting format : currentFormats) {
+            formattedText = formattedText.withStyle(format);
           }
           text.append(formattedText);
         }
       } else {
-        MutableText unformattedText = Text.literal(part);
-        for (Formatting format : currentFormats) {
-          unformattedText = unformattedText.formatted(format);
+        MutableComponent unformattedText = Component.literal(part);
+        for (ChatFormatting format : currentFormats) {
+          unformattedText = unformattedText.withStyle(format);
         }
         text.append(unformattedText);
       }
@@ -122,36 +124,36 @@ public class Helper {
   }
 
   /**
-   * Converts a color code string to a {@link Formatting} enum value.
+   * Converts a color code string to a {@link ChatFormatting} enum value.
    *
    * @param code The color code string (e.g., "&0", "&1").
    *
-   * @return The corresponding {@link Formatting} value.
+   * @return The corresponding {@link ChatFormatting} value.
    */
-  private static Formatting getColorFromCode(String code) {
+  private static ChatFormatting getColorFromCode(String code) {
     return switch (code) {
-      case "&0" -> Formatting.BLACK;
-      case "&1" -> Formatting.DARK_BLUE;
-      case "&2" -> Formatting.DARK_GREEN;
-      case "&3" -> Formatting.DARK_AQUA;
-      case "&4" -> Formatting.DARK_RED;
-      case "&5" -> Formatting.DARK_PURPLE;
-      case "&6" -> Formatting.GOLD;
-      case "&7" -> Formatting.GRAY;
-      case "&8" -> Formatting.DARK_GRAY;
-      case "&9" -> Formatting.BLUE;
-      case "&a" -> Formatting.GREEN;
-      case "&b" -> Formatting.AQUA;
-      case "&c" -> Formatting.RED;
-      case "&d" -> Formatting.LIGHT_PURPLE;
-      case "&e" -> Formatting.YELLOW;
-      case "&f" -> Formatting.WHITE;
-      case "&k" -> Formatting.OBFUSCATED;
-      case "&l" -> Formatting.BOLD;
-      case "&m" -> Formatting.STRIKETHROUGH;
-      case "&n" -> Formatting.UNDERLINE;
-      case "&o" -> Formatting.ITALIC;
-      default -> Formatting.RESET;
+      case "&0" -> ChatFormatting.BLACK;
+      case "&1" -> ChatFormatting.DARK_BLUE;
+      case "&2" -> ChatFormatting.DARK_GREEN;
+      case "&3" -> ChatFormatting.DARK_AQUA;
+      case "&4" -> ChatFormatting.DARK_RED;
+      case "&5" -> ChatFormatting.DARK_PURPLE;
+      case "&6" -> ChatFormatting.GOLD;
+      case "&7" -> ChatFormatting.GRAY;
+      case "&8" -> ChatFormatting.DARK_GRAY;
+      case "&9" -> ChatFormatting.BLUE;
+      case "&a" -> ChatFormatting.GREEN;
+      case "&b" -> ChatFormatting.AQUA;
+      case "&c" -> ChatFormatting.RED;
+      case "&d" -> ChatFormatting.LIGHT_PURPLE;
+      case "&e" -> ChatFormatting.YELLOW;
+      case "&f" -> ChatFormatting.WHITE;
+      case "&k" -> ChatFormatting.OBFUSCATED;
+      case "&l" -> ChatFormatting.BOLD;
+      case "&m" -> ChatFormatting.STRIKETHROUGH;
+      case "&n" -> ChatFormatting.UNDERLINE;
+      case "&o" -> ChatFormatting.ITALIC;
+      default -> ChatFormatting.RESET;
     };
   }
 
@@ -177,7 +179,7 @@ public class Helper {
    * @param packet The packet to be sent.
    */
   public static void sendPacket(Packet<?> packet) {
-    Objects.requireNonNull(MinecraftClient.getInstance().getNetworkHandler()).sendPacket(packet);
+    Objects.requireNonNull(Minecraft.getInstance().getConnection()).send(packet);
   }
 
   public static void sendPluginMessage(String channel, PluginMessagePacketEncoder encoder) {
@@ -195,8 +197,8 @@ public class Helper {
    * @param packet The packet to be sent.
    */
   public static void sendPacket(AbstractPacket packet) {
-    ((ClientConnectionAccessor) MinecraftClient.getInstance()
-      .getNetworkHandler()
+    ((ClientConnectionAccessor) Minecraft.getInstance()
+      .getConnection()
       .getConnection()).paradiseClient$getChannel().write(packet);
   }
 
@@ -204,7 +206,7 @@ public class Helper {
     return getBungeeProtocolForPhase(ParadiseClient.NETWORK_CONFIGURATION.phase);
   }
 
-  public static Protocol getBungeeProtocolForPhase(NetworkPhase phase) {
+  public static Protocol getBungeeProtocolForPhase(ConnectionProtocol phase) {
     switch (phase) {
       case HANDSHAKING -> {
         return Protocol.HANDSHAKE;
@@ -221,7 +223,7 @@ public class Helper {
       case CONFIGURATION -> {
         return Protocol.CONFIGURATION;
       }
-      default -> throw new IllegalArgumentException("Unknown protocol state: " + phase.getId());
+      default -> throw new IllegalArgumentException("Unknown protocol state: " + phase.id());
     }
   }
 
@@ -306,8 +308,8 @@ public class Helper {
     showTrayMessage("ParadiseClient", message, messageType);
   }
 
-  public static PacketByteBuf byteBufToPacketBuf(ByteBuf buf) {
-    return new PacketByteBuf(buf);
+  public static FriendlyByteBuf byteBufToPacketBuf(ByteBuf buf) {
+    return new FriendlyByteBuf(buf);
   }
 
   public static UUID fetchUUID(String username) throws Exception {

@@ -2,7 +2,7 @@ package net.paradise_client.command.impl;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import net.minecraft.command.CommandSource;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.paradise_client.*;
 import net.paradise_client.command.Command;
 import net.paradise_client.command.CommandManager;
@@ -15,7 +15,7 @@ public class HelpCommand extends Command {
   }
 
   @Override
-  public void build(LiteralArgumentBuilder<CommandSource> root) {
+  public void build(LiteralArgumentBuilder<SharedSuggestionProvider> root) {
     root.executes(context -> {
       Helper.printChatMessage("&8&m-----------------------------------------------------", false);
       Helper.printChatMessage("&b&l[Command Categories]");

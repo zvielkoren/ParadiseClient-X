@@ -1,6 +1,6 @@
 package net.paradise_client.inject.mixin.auth;
 
-import net.minecraft.client.session.Session;
+import net.minecraft.client.User;
 import net.paradise_client.inject.accessor.SessionAccessor;
 import org.spongepowered.asm.mixin.*;
 
@@ -16,9 +16,9 @@ import java.util.UUID;
  * @author SpigotRCE
  * @since 1.0
  */
-@SuppressWarnings("unused") @Mixin(Session.class) public class SessionMixin implements SessionAccessor {
+@SuppressWarnings("unused") @Mixin(User.class) public class SessionMixin implements SessionAccessor {
 
-  @Final @Shadow @Mutable private String username;
+  @Final @Shadow @Mutable private String name;
 
   @Final @Shadow @Mutable private UUID uuid;
 
@@ -29,10 +29,10 @@ import java.util.UUID;
    * interface.
    * </p>
    *
-   * @param username The new username to set.
+   * @param name The new username to set.
    */
-  @Override public void paradiseClient$setUsername(String username) {
-    this.username = username;
+  @Override public void paradiseClient$setUsername(String name) {
+    this.name = name;
   }
 
   @Override public void paradiseClient$setUUID(UUID uuid) {

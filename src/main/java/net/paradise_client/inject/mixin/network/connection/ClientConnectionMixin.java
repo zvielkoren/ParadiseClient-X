@@ -1,14 +1,12 @@
 package net.paradise_client.inject.mixin.network.connection;
 
 import io.netty.channel.ChannelHandlerContext;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.*;
-import net.minecraft.network.listener.*;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.s2c.common.ResourcePackSendS2CPacket;
-import net.minecraft.network.packet.s2c.play.CommandSuggestionsS2CPacket;
-import net.minecraft.network.state.NetworkState;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.common.ClientboundResourcePackPushPacket;
+import net.minecraft.network.protocol.game.ClientboundCommandSuggestionsPacket;
 import net.paradise_client.*;
 import net.paradise_client.event.bus.EventBus;
 import net.paradise_client.event.impl.network.PhaseChangeEvent;
@@ -31,7 +29,7 @@ import java.util.List;
  * @author SpigotRCE
  * @since 1.1
  */
-@Mixin(ClientConnection.class) public class ClientConnectionMixin {
+@Mixin(Connection.class) public class ClientConnectionMixin {
 
   /**
    * Injects code at the start of the channelRead0 method to handle incoming packets.
@@ -43,7 +41,7 @@ import java.util.List;
    * @param packet                The incoming packet.
    * @param ci                    Callback information.
    */
-  @Inject(method = "channelRead0(Lio/netty/channel/ChannelHandlerContext;Lnet/minecraft/network/packet/Packet;)V",
+  @Inject(method = "channelRead0(Lio/netty/channel/ChannelHandlerContext;Lnet/minecraft/network/protocol/Packet;)V",
     at = @At("HEAD"),
     cancellable = true) public void channelRead0Head(ChannelHandlerContext channelHandlerContext,
     Packet<?> packet,
@@ -56,7 +54,7 @@ import java.util.List;
 
     ParadiseClient.NETWORK_CONFIGURATION.lastPacket = System.currentTimeMillis();
 
-    if (packet instanceof CommandSuggestionsS2CPacket suggestionsS2CPacket) {
+    if (packet instanceof ClientboundCommandSuggestionsPacket suggestionsS2CPacket) {
       if (suggestionsS2CPacket.id() != ParadiseClient.MISC_MOD.requestId) {
         return;
       }
@@ -65,21 +63,21 @@ import java.util.List;
       }
       Helper.printChatMessage("Command suggestions received! Dumping");
       Helper.printChatMessage("Debug request id: " + suggestionsS2CPacket.id());
-      List<CommandSuggestionsS2CPacket.Suggestion> suggestions = suggestionsS2CPacket.suggestions();
+      List<ClientboundCommandSuggestionsPacket.Entry> suggestions = suggestionsS2CPacket.suggestions();
 
       new Thread(() -> {
         try {
           suggestions.forEach(suggestion -> {
-            MinecraftClient.getInstance().getNetworkHandler().sendChatCommand("ip " + suggestion.text());
+            Minecraft.getInstance().getConnection().sendCommand("ip " + suggestion.text());
           });
         } catch (Exception ignored) {
         }
       }).start();
     }
 
-    if (packet instanceof ResourcePackSendS2CPacket resourcePackSendS2CPacket) {
+    if (packet instanceof ClientboundResourcePackPushPacket resourcePackSendS2CPacket) {
       String url = resourcePackSendS2CPacket.url();
-      Helper.printChatMessage(Text.of("Server resource pack url: " + url));
+      Helper.printChatMessage(Component.nullToEmpty("Server resource pack url: " + url));
     }
 
   }
@@ -94,7 +92,7 @@ import java.util.List;
    * @param packet                The incoming packet.
    * @param ci                    Callback information.
    */
-  @Inject(method = "channelRead0(Lio/netty/channel/ChannelHandlerContext;Lnet/minecraft/network/packet/Packet;)V",
+  @Inject(method = "channelRead0(Lio/netty/channel/ChannelHandlerContext;Lnet/minecraft/network/protocol/Packet;)V",
     at = @At("TAIL")) public void channelRead0Tail(ChannelHandlerContext channelHandlerContext,
     Packet<?> packet,
     CallbackInfo ci) {
@@ -112,8 +110,8 @@ import java.util.List;
    * @param flush     Whether to flush the packet.
    * @param ci        Callback information.
    */
-  @Inject(method = "sendImmediately", at = @At("HEAD"), cancellable = true)
-  public void sendImmediatelyHead(Packet<?> packet, PacketCallbacks callbacks, boolean flush, CallbackInfo ci) {
+  @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketSendListener;Z)V", at = @At("HEAD"), cancellable = true)
+  public void sendImmediatelyHead(Packet<?> packet, PacketSendListener callbacks, boolean flush, CallbackInfo ci) {
     EventBus.ListenerContext<PacketOutgoingPreEvent> ctx =
       EventBus.fire(EventBus.PACKET_OUTGOING_PRE_EVENT_CHANNEL, new PacketOutgoingPreEvent(packet));
     if (ctx.isCancelled()) {
@@ -132,8 +130,8 @@ import java.util.List;
    * @param flush     Whether to flush the packet.
    * @param ci        Callback information.
    */
-  @Inject(method = "sendImmediately", at = @At("TAIL")) public void sendImmediatelyTail(Packet<?> packet,
-    PacketCallbacks callbacks,
+  @Inject(method = "sendPacket", at = @At("TAIL")) public void sendImmediatelyTail(Packet<?> packet,
+    PacketSendListener callbacks,
     boolean flush,
     CallbackInfo ci) throws InvocationTargetException, IllegalAccessException {
     EventBus.fire(EventBus.PACKET_OUTGOING_POST_EVENT_CHANNEL, new PacketOutgoingPostEvent(packet));
@@ -148,28 +146,28 @@ import java.util.List;
    * @param disconnectionInfo The disconnection information.
    * @param ci                Callback information.
    */
-  @Inject(method = "disconnect(Lnet/minecraft/network/DisconnectionInfo;)V", at = @At("HEAD"))
-  public void disconnectHead(DisconnectionInfo disconnectionInfo, CallbackInfo ci) {
+  @Inject(method = "disconnect(Lnet/minecraft/network/DisconnectionDetails;)V", at = @At("HEAD"))
+  public void disconnectHead(DisconnectionDetails disconnectionInfo, CallbackInfo ci) {
     ParadiseClient.NETWORK_MOD.isConnected = false;
   }
 
-  @Inject(method = "connect(Ljava/lang/String;ILnet/minecraft/network/state/NetworkState;Lnet/minecraft/network/state/NetworkState;Lnet/minecraft/network/listener/ClientPacketListener;Z)V",
+  @Inject(method = "initiateServerboundPlayConnection(Ljava/lang/String;ILnet/minecraft/network/ProtocolInfo;Lnet/minecraft/network/ProtocolInfo;Lnet/minecraft/network/ClientboundPacketListener;Z)V",
     at = @At("HEAD"))
-  public <S extends ServerPacketListener, C extends ClientPacketListener> void connect(String address,
+  public <S extends ServerboundPacketListener, C extends ClientboundPacketListener> void connect(String address,
     int port,
-    NetworkState<S> outboundState,
-    NetworkState<C> inboundState,
+    ProtocolInfo<S> outboundState,
+    ProtocolInfo<C> inboundState,
     C prePlayStateListener,
     boolean transfer,
     CallbackInfo ci) {
-    ParadiseClient.NETWORK_CONFIGURATION.phase = NetworkPhase.HANDSHAKING;
+    ParadiseClient.NETWORK_CONFIGURATION.phase = ConnectionProtocol.HANDSHAKING;
   }
 
-  @Inject(method = "transitionInbound", at = @At("HEAD"))
-  public <T extends PacketListener> void onTransitionInbound(NetworkState<T> state, T packetListener, CallbackInfo ci)
+  @Inject(method = "setupInboundProtocol", at = @At("HEAD"))
+  public <T extends PacketListener> void onTransitionInbound(ProtocolInfo<T> state, T packetListener, CallbackInfo ci)
     throws InvocationTargetException, IllegalAccessException {
     ParadiseClient.NETWORK_CONFIGURATION.set(state.id(),
-      state.side(),
+      state.flow(),
       ParadiseClient.NETWORK_CONFIGURATION.protocolVersion);
     EventBus.fire(EventBus.PHASE_CHANGE_EVENT_CHANNEL, new PhaseChangeEvent(state.id()));
   }

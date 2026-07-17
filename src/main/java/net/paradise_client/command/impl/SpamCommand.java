@@ -2,7 +2,7 @@ package net.paradise_client.command.impl;
 
 import com.mojang.brigadier.arguments.*;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import net.minecraft.command.CommandSource;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.paradise_client.*;
 import net.paradise_client.command.Command;
 import net.paradise_client.command.CommandManager;
@@ -34,7 +34,7 @@ public class SpamCommand extends Command {
   /**
    * Builds the command structure using Brigadier's LiteralArgumentBuilder.
    */
-  @Override public void build(LiteralArgumentBuilder<CommandSource> root) {
+  @Override public void build(LiteralArgumentBuilder<SharedSuggestionProvider> root) {
     root.then(literal("stop").executes((context) -> {
       if (!isRunning) {
         Helper.printChatMessage("Spam is not running");
@@ -64,7 +64,7 @@ public class SpamCommand extends Command {
           } catch (InterruptedException e) {
             Constants.LOGGER.error("Unable to sleep for 1000ms", e);
           }
-          getMinecraftClient().getNetworkHandler().sendChatCommand(command);
+          getMinecraftClient().getConnection().sendCommand(command);
         }
       });
       thread.start();

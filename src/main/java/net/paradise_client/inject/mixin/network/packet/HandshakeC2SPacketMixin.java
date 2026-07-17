@@ -1,6 +1,7 @@
 package net.paradise_client.inject.mixin.network.packet;
 
-import net.minecraft.network.packet.c2s.handshake.*;
+import net.minecraft.network.protocol.handshake.ClientIntent;
+import net.minecraft.network.protocol.handshake.ClientIntentionPacket;
 import net.paradise_client.ParadiseClient;
 import net.paradise_client.mod.BungeeSpoofMod;
 import org.spongepowered.asm.mixin.*;
@@ -17,9 +18,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * @author SpigotRCE
  * @since 1.0
  */
-@Mixin(HandshakeC2SPacket.class) public class HandshakeC2SPacketMixin {
+@Mixin(ClientIntentionPacket.class) public class HandshakeC2SPacketMixin {
 
-  @Mutable @Shadow @Final private String address;
+  @Mutable @Shadow @Final private String hostName;
 
   /**
    * Injects code into the constructor of the HandshakeC2SPacket class to modify the address and append BungeeCord
@@ -35,19 +36,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
    * @param connectionIntent The connection intent of the handshake.
    * @param ci               The callback information.
    */
-  @Inject(method = "<init>(ILjava/lang/String;ILnet/minecraft/network/packet/c2s/handshake/ConnectionIntent;)V",
+  @Inject(method = "<init>(ILjava/lang/String;ILnet/minecraft/network/protocol/handshake/ClientIntent;)V",
     at = @At("RETURN")) private void HandshakeC2SPacket(int i,
     String string,
     int j,
-    ConnectionIntent connectionIntent,
+    ClientIntent connectionIntent,
     CallbackInfo ci) {
     BungeeSpoofMod bungeeSpoofMod = ParadiseClient.BUNGEE_SPOOF_MOD;
 
     if (bungeeSpoofMod.isHostnameForwarding) {
-      this.address = bungeeSpoofMod.hostname;
+      this.hostName = bungeeSpoofMod.hostname;
     }
-    if (bungeeSpoofMod.isIPForwarding && connectionIntent == ConnectionIntent.LOGIN) {
-      this.address += "\000" +
+    if (bungeeSpoofMod.isIPForwarding && connectionIntent == ClientIntent.LOGIN) {
+      this.hostName += "\000" +
         bungeeSpoofMod.ip +
         "\000" +
         bungeeSpoofMod.uuid.toString().replace("-", "") +

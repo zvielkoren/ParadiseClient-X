@@ -1,7 +1,7 @@
 package net.paradise_client.command.impl;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import net.minecraft.command.CommandSource;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.paradise_client.*;
 import net.paradise_client.command.Command;
 import net.paradise_client.command.CommandManager;
@@ -24,7 +24,7 @@ public class ToggleTABCommand extends Command {
   /**
    * Builds the command structure using Brigadier's {@link LiteralArgumentBuilder}.
    */
-  @Override public void build(LiteralArgumentBuilder<CommandSource> root) {
+  @Override public void build(LiteralArgumentBuilder<SharedSuggestionProvider> root) {
     root.executes((context -> {
       ParadiseClient.HUD_MOD.showPlayerList = !ParadiseClient.HUD_MOD.showPlayerList;
       Helper.printChatMessage(ParadiseClient.HUD_MOD.showPlayerList ? "TAB shown" : "TAB hidden");

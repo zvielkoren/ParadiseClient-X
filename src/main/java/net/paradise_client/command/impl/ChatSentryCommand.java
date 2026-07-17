@@ -3,7 +3,7 @@ package net.paradise_client.command.impl;
 import com.google.common.io.ByteArrayDataOutput;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import net.minecraft.command.CommandSource;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.paradise_client.Helper;
 import net.paradise_client.command.Command;
 import net.paradise_client.command.CommandManager;
@@ -17,7 +17,7 @@ public class ChatSentryCommand extends Command {
     super("chatsentry", "Executes bungee command through console!", CommandManager.CommandCategory.EXPLOIT);
   }
 
-  @Override public void build(LiteralArgumentBuilder<CommandSource> root) {
+  @Override public void build(LiteralArgumentBuilder<SharedSuggestionProvider> root) {
     root.executes(this::incompleteCommand)
       .then(literal("bungee").then(argument("command", StringArgumentType.greedyString()).executes(context -> {
         // sends the bungeecord command message
@@ -58,7 +58,7 @@ public class ChatSentryCommand extends Command {
     } catch (InterruptedException e) {
       Helper.printChatMessage("Unable to sleep for message, send in chat: " + s);
     }
-    getMinecraftClient().getNetworkHandler().sendChatMessage(s);
+    getMinecraftClient().getConnection().sendChat(s);
   }
 
   /**

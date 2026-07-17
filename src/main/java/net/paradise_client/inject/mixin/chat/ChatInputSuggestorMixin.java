@@ -3,10 +3,10 @@ package net.paradise_client.inject.mixin.chat;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.brigadier.*;
 import com.mojang.brigadier.suggestion.Suggestions;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ChatInputSuggestor;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.command.CommandSource;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.CommandSuggestions;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.paradise_client.ParadiseClient;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.*;
@@ -15,12 +15,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.concurrent.CompletableFuture;
 
 
-@Mixin(ChatInputSuggestor.class) public abstract class ChatInputSuggestorMixin {
-  @Shadow @Final TextFieldWidget textField;
-  @Shadow boolean completingSuggestions;
-  @Shadow private ParseResults<CommandSource> parse;
+@Mixin(CommandSuggestions.class) public abstract class ChatInputSuggestorMixin {
+  @Shadow @Final EditBox input;
+  @Shadow boolean keepSuggestions;
+  @Shadow private ParseResults<SharedSuggestionProvider> currentParse;
   @Shadow private CompletableFuture<Suggestions> pendingSuggestions;
-  @Shadow private ChatInputSuggestor.SuggestionWindow window;
+  @Shadow private CommandSuggestions.SuggestionsList suggestions;
 
   /**
    * To suggest tab completion for paradise registered commands.
@@ -28,7 +28,7 @@ import java.util.concurrent.CompletableFuture;
    * @param ci
    * @param reader
    */
-  @Inject(method = "refresh",
+  @Inject(method = "updateCommandInfo",
     at = @At(value = "INVOKE", target = "Lcom/mojang/brigadier/StringReader;canRead()Z", remap = false),
     cancellable = true) public void onRefresh(CallbackInfo ci, @Local StringReader reader) {
     String prefix = ParadiseClient.COMMAND_MANAGER.prefix;
@@ -37,18 +37,18 @@ import java.util.concurrent.CompletableFuture;
     if (reader.canRead(length) && reader.getString().startsWith(prefix, reader.getCursor())) {
       reader.setCursor(reader.getCursor() + length);
 
-      if (this.parse == null) {
-        this.parse = ParadiseClient.COMMAND_MANAGER.DISPATCHER.parse(reader,
-          MinecraftClient.getInstance().getNetworkHandler().getCommandSource());
+      if (this.currentParse == null) {
+        this.currentParse = ParadiseClient.COMMAND_MANAGER.DISPATCHER.parse(reader,
+          Minecraft.getInstance().getConnection().getSuggestionsProvider());
       }
 
-      int cursor = textField.getCursor();
-      if (cursor >= length && (this.window == null || !this.completingSuggestions)) {
+      int cursor = this.input.getCursorPosition();
+      if (cursor >= length && (this.suggestions == null || !this.keepSuggestions)) {
         this.pendingSuggestions =
-          ParadiseClient.COMMAND_MANAGER.DISPATCHER.getCompletionSuggestions(this.parse, cursor);
+          ParadiseClient.COMMAND_MANAGER.DISPATCHER.getCompletionSuggestions(this.currentParse, cursor);
         this.pendingSuggestions.thenRun(() -> {
           if (this.pendingSuggestions.isDone()) {
-            this.showCommandSuggestions();
+            this.showSuggestions(false);
           }
         });
       }
@@ -57,5 +57,5 @@ import java.util.concurrent.CompletableFuture;
     }
   }
 
-  @Shadow protected abstract void showCommandSuggestions();
+  @Shadow public abstract void showSuggestions(boolean bl);
 }

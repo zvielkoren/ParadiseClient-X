@@ -2,8 +2,8 @@ package net.paradise_client.command.impl;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.command.CommandSource;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.paradise_client.*;
 import net.paradise_client.command.Command;
 import net.paradise_client.command.CommandManager;
@@ -17,13 +17,13 @@ public class SignedVelocityCommand extends Command {
     super("signedvelocity", "Spoofs player sent commands", CommandManager.CommandCategory.EXPLOIT);
   }
 
-  @Override public void build(LiteralArgumentBuilder<CommandSource> root) {
+  @Override public void build(LiteralArgumentBuilder<SharedSuggestionProvider> root) {
     root.executes(this::incompleteCommand)
       .then(argument("user", StringArgumentType.word()).suggests(this::suggestOnlinePlayers)
         .executes(this::incompleteCommand)
         .then(argument("command", StringArgumentType.greedyString()).executes(context -> {
           String user = context.getArgument("user", String.class);
-          for (PlayerListEntry p : getMinecraftClient().getNetworkHandler().getPlayerList()) {
+          for (PlayerInfo p : getMinecraftClient().getConnection().getOnlinePlayers()) {
             if (p.getProfile().getName().equalsIgnoreCase(user)) {
               String uuid = p.getProfile().getId().toString();
               String command = context.getArgument("command", String.class);

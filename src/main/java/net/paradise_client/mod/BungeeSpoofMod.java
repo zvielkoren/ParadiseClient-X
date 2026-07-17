@@ -1,7 +1,7 @@
 package net.paradise_client.mod;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.session.Session;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.User;
 import net.paradise_client.inject.accessor.SessionAccessor;
 
 import java.util.UUID;
@@ -74,13 +74,13 @@ public class BungeeSpoofMod {
    * </p>
    */
   public BungeeSpoofMod() {
-    MinecraftClient minecraft = MinecraftClient.getInstance();
-    Session minecraftSession = minecraft.getSession();
+    Minecraft minecraft = Minecraft.getInstance();
+    User minecraftSession = minecraft.getUser();
     this.sessionAccessor = (SessionAccessor) minecraftSession;
-    this.usernameReal = minecraftSession.getUsername();
+    this.usernameReal = minecraftSession.getName();
     this.usernameFake = this.usernameReal;
     this.isUUIDOnline = false;
-    this.uuid = minecraftSession.getUuidOrNull();
+    this.uuid = minecraftSession.getProfileId();
     this.ip = "1.3.3.7";
     this.hostname = "0.0.0.0";
     this.token = "";
