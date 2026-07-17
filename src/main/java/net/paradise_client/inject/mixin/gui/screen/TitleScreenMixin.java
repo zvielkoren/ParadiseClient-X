@@ -1,220 +1,177 @@
 package net.paradise_client.inject.mixin.gui.screen;
 
 import net.minecraft.client.MinecraftClient;
-import net.paradise_client.themes.Theme;
-import net.paradise_client.themes.ThemeManager;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.Element;
+import net.minecraft.client.gui.*;
 import net.minecraft.client.gui.screen.*;
-import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
-import net.minecraft.client.gui.screen.option.AccessibilityOptionsScreen;
-import net.minecraft.client.gui.screen.option.OptionsScreen;
-import net.minecraft.client.gui.screen.world.SelectWorldScreen;
-import net.minecraft.client.realms.gui.screen.RealmsMainScreen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.gui.widget.*;
+import net.minecraft.client.realms.gui.screen.RealmsNotificationsScreen;
 import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
-import net.paradise_client.Constants;
-import org.lwjgl.glfw.GLFW;
-import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.gen.Accessor;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
+import net.paradise_client.*;
+import net.paradise_client.wallpaper.*;
+import org.jetbrains.annotations.Nullable;
+import org.spongepowered.asm.mixin.*;
+import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+/**
+ * Mixin class to customize the behavior of the Title Screen in Minecraft.
+ * <p>
+ * This class modifies the Title Screen to include a custom button recommending the installation of "ViaFabricPlus" and
+ * customizes the background fade effect. It also displays additional information about the client and game version.
+ * </p>
+ *
+ * @author SpigotRCE
+ * @since 2.9
+ */
+@SuppressWarnings("unused") @Mixin(TitleScreen.class) public abstract class TitleScreenMixin extends Screen {
 
-@Mixin(ButtonWidget.class)
-interface ButtonWidgetAccessor {
-  @Accessor("onPress")
-  ButtonWidget.PressAction getOnPress();
-}
+  /**
+   * The splash text renderer used to display splash texts on the Title Screen.
+   */
+  @Nullable @Shadow private SplashTextRenderer splashText;
 
-@Mixin(TitleScreen.class)
-public abstract class TitleScreenMixin extends Screen {
+  /**
+   * The Realms Notifications Screen displayed on the Title Screen if active.
+   */
+  @Nullable @Shadow private RealmsNotificationsScreen realmsNotificationGui;
 
-  @Shadow private boolean doBackgroundFade;
-  @Shadow private long backgroundFadeStart;
-  @Shadow private float backgroundAlpha;
-  @Shadow protected abstract void renderPanoramaBackground(DrawContext context, float deltaTicks);
+  /**
+   * Alpha value for the background fade effect on the Title Screen.
+   */
+  @Mutable @Shadow private float backgroundAlpha;
 
-  private final MinecraftClient client = MinecraftClient.getInstance();
-  private final Identifier logoImage = Identifier.of(Constants.MOD_ID, "textures/icon/icon.png");
-  private final Identifier optionsIcon = Identifier.of(Constants.MOD_ID, "textures/icon/options.png");
-  private final Identifier accessibilityIcon = Identifier.of(Constants.MOD_ID, "textures/icon/accessibility.png");
-  private final Identifier realmsIcon = Identifier.of(Constants.MOD_ID, "textures/icon/realms.png");
+  /**
+   * Flag indicating whether the background fade effect is enabled.
+   */
+  @Mutable @Shadow private boolean doBackgroundFade;
 
-  private ButtonWidget quitButton;
-  private ButtonWidget optionsButton;
-  private ButtonWidget accessibilityButton;
-  private ButtonWidget realmsButton;
+  /**
+   * The start time for the background fade effect, in milliseconds.
+   */
+  @Mutable @Shadow private long backgroundFadeStart;
 
+  /**
+   * The logo drawer used to render the logo on the Title Screen.
+   */
+  @Final @Shadow private LogoDrawer logoDrawer;
+
+  /**
+   * Constructs a new instance of the TitleScreenMixin.
+   *
+   * @param title The title of the screen.
+   */
   protected TitleScreenMixin(Text title) {
     super(title);
   }
 
-  @Inject(method = "init", at = @At("TAIL"))
-  private void initParadise(CallbackInfo ci) {
-    List<Element> toRemove = new ArrayList<>();
-    for (Element element : this.children()) {
-      if (element instanceof ButtonWidget) {
-        toRemove.add(element);
-      }
+  /**
+   * Injects a custom button into the Title Screen if "viafabricplus" is not loaded. The button directs the user to a
+   * URL for installation.
+   *
+   * @param ci Callback information.
+   */
+  @Inject(method = "init", at = @At(value = "TAIL")) public void init(CallbackInfo ci) {
+    Text updateMessage1 = Helper.parseColoredText("&2Current version: &1" +
+      Constants.VERSION +
+      " &2Latetst version: &1" +
+      ParadiseClient.MISC_MOD.latestVersion +
+      " &fClick to download");
+    if (ParadiseClient.MISC_MOD.isClientOutdated) {
+      this.addDrawableChild(new PressableTextWidget(this.width - this.textRenderer.getWidth(updateMessage1) - 2,
+        this.height - 20,
+        this.textRenderer.getWidth(updateMessage1),
+        10,
+        updateMessage1,
+        (button) -> {
+          Util.getOperatingSystem().open("https://paradise-client.net/downloads");
+          MinecraftClient.getInstance().setScreen(new TitleScreen());
+        },
+        this.textRenderer));
     }
-    for (Element element : toRemove) {
-      this.remove(element);
-    }
 
-    quitButton = null;
+    // Adding a button to switch themes dynamically
+    // This button toggles between "hack" and "particle" themes
+    Theme currentTheme = ThemeRenderer.getTheme();
 
-    int buttonWidth = 200;
-    int buttonHeight = 20;
-    int spacing = 6;
+    this.addDrawableChild(ButtonWidget.builder(Text.literal("Theme: " + currentTheme.getName()), onPress -> {
+      Theme[] themes = Theme.values();
+      int nextOrdinal = (ThemeRenderer.getTheme().ordinal() + 1) % themes.length;
+      Theme nextTheme = themes[nextOrdinal];
+      ThemeRenderer.setTheme(nextTheme);
+      onPress.setMessage(Text.literal("Theme: " + nextTheme.getName()));
+    }).width(150).position(this.width / 2 - 75, this.height / 4 + 160).build());
 
-    int logoHeight = 100;
-    int logoY = this.height / 2 - 120;
-    int titleY = logoY + logoHeight + 10;
-    int titleHeight = this.textRenderer.fontHeight;
-    int centerY = titleY + titleHeight + 20;
-    int centerX = this.width / 2 - buttonWidth / 2;
-
-    this.addDrawableChild(ButtonWidget.builder(Text.literal("Singleplayer"),
-                    b -> client.setScreen(new SelectWorldScreen(this)))
-            .dimensions(centerX, centerY, buttonWidth, buttonHeight).build());
-
-    this.addDrawableChild(ButtonWidget.builder(Text.literal("Multiplayer"),
-                    b -> client.setScreen(new MultiplayerScreen(this)))
-            .dimensions(centerX, centerY + buttonHeight + spacing, buttonWidth, buttonHeight).build());
-
-    this.addDrawableChild(ButtonWidget.builder(Text.literal("Website"),
-                    b -> Util.getOperatingSystem().open("https://paradise-client.net"))
-            .dimensions(centerX, centerY + 2 * (buttonHeight + spacing), buttonWidth, buttonHeight).build());
-
-    int quitButtonWidth = 60;
-    int quitButtonHeight = 20;
-    int quitX = this.width - quitButtonWidth - 18;
-    int quitY = 18;
-    quitButton = ButtonWidget.builder(Text.literal("Quit"),
-                    b -> {
-                      client.scheduleStop();
-                    })
-            .dimensions(quitX, quitY, quitButtonWidth, quitButtonHeight)
-            .build();
-    this.addDrawableChild(quitButton);
-
-    TextRenderer font = this.textRenderer;
-    int iconSize = 20;
-    int lastMainY = centerY + 2 * (buttonHeight + spacing);
-    int bottomY = lastMainY + buttonHeight + 20;
-    int toolbarSpacing = 4;
-    int toolbarStartX = (this.width - (3 * iconSize + 2 * toolbarSpacing)) / 2;
-
-    optionsButton = ButtonWidget.builder(Text.literal("Options"),
-                    b -> client.setScreen(new OptionsScreen(this, client.options)))
-            .dimensions(toolbarStartX, bottomY, iconSize, iconSize).build();
-    this.addDrawableChild(optionsButton);
-
-    accessibilityButton = ButtonWidget.builder(Text.literal("Accessibility Settings"),
-                    b -> client.setScreen(new AccessibilityOptionsScreen(this, client.options)))
-            .dimensions(toolbarStartX + iconSize + toolbarSpacing, bottomY, iconSize, iconSize).build();
-    this.addDrawableChild(accessibilityButton);
-
-    realmsButton = ButtonWidget.builder(Text.literal("Realms"),
-                    b -> client.setScreen(new RealmsMainScreen(this)))
-            .dimensions(toolbarStartX + 2 * (iconSize + toolbarSpacing), bottomY, iconSize, iconSize).build();
-    this.addDrawableChild(realmsButton);
-
-    int themeButtonWidth = 100;
-    int themeButtonHeight = 20;
-    int themeX = 18;
-    int themeY = 18;
-    this.addDrawableChild(ButtonWidget.builder(Text.literal("Change Theme"),
-                    b -> {
-                      Theme[] themes = Theme.values();
-                      int currentIndex = Arrays.asList(themes).indexOf(ThemeManager.getTheme());
-                      int nextIndex = (currentIndex + 1) % themes.length;
-                      ThemeManager.setTheme(themes[nextIndex]);
-                    })
-            .dimensions(themeX, themeY, themeButtonWidth, themeButtonHeight).build());
   }
 
-  @Inject(method = "render", at = @At("HEAD"), cancellable = true)
-  private void renderParadise(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+  /**
+   * Renders the Title Screen with custom background and additional information. This method handles background fading
+   * and custom text rendering.
+   *
+   * @param context The draw context used for rendering.
+   * @param mouseX  The mouse X position.
+   * @param mouseY  The mouse Y position.
+   * @param delta   The delta time since the last frame.
+   * @param ci      Callback information.
+   */
+  @Inject(method = "render", at = @At("HEAD"), cancellable = true) public void render(DrawContext context,
+    int mouseX,
+    int mouseY,
+    float delta,
+    CallbackInfo ci) {
     if (this.backgroundFadeStart == 0L && this.doBackgroundFade) {
       this.backgroundFadeStart = Util.getMeasuringTimeMs();
     }
 
+    float f = 1.0F;
     if (this.doBackgroundFade) {
-      float t = (float)(Util.getMeasuringTimeMs() - this.backgroundFadeStart) / 2000.0F;
-      if (t > 1.0F) {
+      float g = (float) (Util.getMeasuringTimeMs() - this.backgroundFadeStart) / 2000.0F;
+      if (g > 1.0F) {
         this.doBackgroundFade = false;
         this.backgroundAlpha = 1.0F;
       } else {
-        t = MathHelper.clamp(t, 0.0F, 1.0F);
-        this.backgroundAlpha = MathHelper.clampedMap(t, 0.0F, 0.5F, 0.0F, 1.0F);
+        g = MathHelper.clamp(g, 0.0F, 1.0F);
+        f = MathHelper.clampedMap(g, 0.5F, 1.0F, 0.0F, 1.0F);
+        this.backgroundAlpha = MathHelper.clampedMap(g, 0.0F, 0.5F, 0.0F, 1.0F);
       }
+
+      this.setWidgetAlpha(f);
     }
 
-    ThemeManager.update();
-    ThemeManager.renderBackground(context, this.width, this.height);
-
-    int logoWidth = 100;
-    int logoHeight = 100;
-    int logoX = (this.width - logoWidth) / 2;
-    int logoY = this.height / 2 - 120;
-    context.drawTexture(RenderLayer::getGuiTextured, logoImage, logoX, logoY, 0.0F, 0.0F, logoWidth, logoHeight, logoWidth, logoHeight);
-
-    TextRenderer font = this.textRenderer;
-
-    for (Element element : this.children()) {
-      if (element instanceof ButtonWidget button) {
-        boolean hovered = button.isMouseOver(mouseX, mouseY);
-        boolean pressed = hovered && (GLFW.glfwGetMouseButton(client.getWindow().getHandle(), GLFW.GLFW_MOUSE_BUTTON_1) == GLFW.GLFW_PRESS);
-        String text = button.getMessage().getString();
-        if (button == optionsButton || button == accessibilityButton || button == realmsButton) {
-          text = "";
-        }
-        ThemeManager.renderButton(context,
-                button.getX(),
-                button.getY(),
-                button.getWidth(),
-                button.getHeight(),
-                hovered,
-                pressed,
-                text,
-                font);
-
-        if (button == optionsButton) {
-          int iconX = button.getX() + (button.getWidth() - 16) / 2;
-          int iconY = button.getY() + (button.getHeight() - 16) / 2;
-          context.drawTexture(RenderLayer::getGuiTextured, optionsIcon, iconX, iconY, 0.0F, 0.0F, 16, 16, 16, 16);
-        } else if (button == accessibilityButton) {
-          int iconX = button.getX() + (button.getWidth() - 16) / 2;
-          int iconY = button.getY() + (button.getHeight() - 16) / 2;
-          context.drawTexture(RenderLayer::getGuiTextured, accessibilityIcon, iconX, iconY, 0.0F, 0.0F, 16, 16, 16, 16);
-        } else if (button == realmsButton) {
-          int iconX = button.getX() + (button.getWidth() - 16) / 2;
-          int iconY = button.getY() + (button.getHeight() - 16) / 2;
-          context.drawTexture(RenderLayer::getGuiTextured, realmsIcon, iconX, iconY, 0.0F, 0.0F, 16, 16, 16, 16);
+    this.renderPanoramaBackground(context, delta);
+    int i = MathHelper.ceil(f * 255.0F) << 24;
+    if ((i & -67108864) != 0) {
+      super.render(context, mouseX, mouseY, delta);
+      this.logoDrawer.draw(context, this.width, f);
+      if (this.splashText != null) {
+        if (!(Boolean) this.client.options.getHideSplashTexts().getValue()) {
+          this.splashText.render(context, this.width, this.textRenderer, i);
         }
       }
+      context.drawTextWithShadow(this.textRenderer, Constants.windowTitle, 2, this.height - 10, 16777215 | i);
+      if (this.isRealmsNotificationsGuiDisplayed() && f >= 1.0F) {
+        this.realmsNotificationGui.render(context, mouseX, mouseY, delta);
+      }
     }
-
-    String versionText = "ParadiseClient " + Constants.VERSION;
-    context.drawText(font, versionText, 8, this.height - font.fontHeight - 8, 0x88FFFFFF, false);
-
-    String disclaimer = "Not affiliated with Mojang or Microsoft. Do not distribute!";
-    int disclaimerWidth = font.getWidth(disclaimer);
-    context.drawText(font, disclaimer, this.width - disclaimerWidth - 8,
-            this.height - font.fontHeight - 8, 0x88FFFFFF, false);
-
+    super.render(context, mouseX, mouseY, delta);
     ci.cancel();
+  }
+
+  /**
+   * Sets the alpha value for widgets. This method is shadowed from the original TitleScreen class.
+   *
+   * @param alpha The alpha value to set.
+   */
+  @Shadow private void setWidgetAlpha(float alpha) {
+  }
+
+  /**
+   * Checks if the Realms Notifications GUI is displayed. This method is shadowed from the original TitleScreen class.
+   *
+   * @return True if the Realms Notifications GUI is displayed, false otherwise.
+   */
+  @Shadow private boolean isRealmsNotificationsGuiDisplayed() {
+    return false;
   }
 }

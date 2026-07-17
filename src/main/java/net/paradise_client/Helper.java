@@ -32,6 +32,21 @@ import java.util.*;
  */
 public class Helper {
   /**
+   * Generates a chroma color based on the current time and given delay.
+   *
+   * @param delay      The delay in milliseconds to affect the color shift.
+   * @param saturation The saturation of the color.
+   * @param brightness The brightness of the color.
+   *
+   * @return The generated {@link Color} object.
+   */
+  public static Color getChroma(int delay, float saturation, float brightness) {
+    double chroma = Math.ceil((double) (System.currentTimeMillis() + delay) / 20);
+    chroma %= 360;
+    return Color.getHSBColor((float) (chroma / 360), saturation, brightness);
+  }
+
+  /**
    * Sends a chat message to the Minecraft player.
    *
    * @param message The message to be sent.

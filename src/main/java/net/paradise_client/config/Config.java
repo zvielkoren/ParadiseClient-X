@@ -3,7 +3,7 @@ package net.paradise_client.config;
 import dev.dejvokep.boostedyaml.YamlDocument;
 import net.minecraft.client.MinecraftClient;
 import net.paradise_client.Constants;
-import net.paradise_client.themes.Theme;
+import net.paradise_client.wallpaper.Theme;
 
 import java.io.*;
 
