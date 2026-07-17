@@ -49,7 +49,13 @@ public enum ProtocolVersion {
   V_1_21(767, "1.21", "1.21.1"),
   V_1_21_2(768, "1.21.2", "1.21.3"),
   V_1_21_4(769, "1.21.4"),
-  V_1_21_5(770, "1.21.5");
+  V_1_21_5(770, "1.21.5"),
+  V_1_21_6(771, "1.21.6"),
+  V_1_21_7(772, "1.21.7", "1.21.8"),
+  V_1_21_9(773, "1.21.9", "1.21.10"),
+  V_1_21_11(774, "1.21.11"),
+  V_26_1(775, "26.1", "26.1.1", "26.1.2"),
+  V_26_2(776, "26.2");
   public static final List<Integer> SUPPORTED_VERSION_IDS = new ArrayList<>();
 
 
@@ -110,6 +116,12 @@ public enum ProtocolVersion {
     SUPPORTED_VERSION_IDS.add(V_1_21_2.protocol);
     SUPPORTED_VERSION_IDS.add(V_1_21_4.protocol);
     SUPPORTED_VERSION_IDS.add(V_1_21_5.protocol);
+    SUPPORTED_VERSION_IDS.add(V_1_21_6.protocol);
+    SUPPORTED_VERSION_IDS.add(V_1_21_7.protocol);
+    SUPPORTED_VERSION_IDS.add(V_1_21_9.protocol);
+    SUPPORTED_VERSION_IDS.add(V_1_21_11.protocol);
+    SUPPORTED_VERSION_IDS.add(V_26_1.protocol);
+    SUPPORTED_VERSION_IDS.add(V_26_2.protocol);
   }
 
   private final int protocol;

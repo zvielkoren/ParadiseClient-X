@@ -17,7 +17,7 @@ public class AuthMeVelocityBypassCommand extends Command {
 
   @Override public void build(LiteralArgumentBuilder<SharedSuggestionProvider> root) {
     root.executes(context -> {
-      PacketFactory.sendAMV(Minecraft.getInstance().getGameProfile().getName());
+      PacketFactory.sendAMV(Minecraft.getInstance().getGameProfile().name());
       Helper.printChatMessage("Payload packet sent!");
       return Command.SINGLE_SUCCESS;
     });

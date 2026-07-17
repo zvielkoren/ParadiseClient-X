@@ -1,19 +1,18 @@
 package net.paradise_client;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.*;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.minecraft.client.KeyMapping;
-import net.minecraft.client.Minecraft;
+import net.minecraft.client.*;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.paradise_client.addon.AddonLoader;
 import net.paradise_client.command.CommandManager;
 import net.paradise_client.config.Config;
 import net.paradise_client.discord.DiscordRPCManager;
-import net.paradise_client.event.bus.EventBus;
 import net.paradise_client.exploit.ExploitManager;
 import net.paradise_client.mod.*;
 import net.paradise_client.packet.DummyPacket;
@@ -22,7 +21,6 @@ import org.lwjgl.glfw.*;
 import org.lwjgl.system.MemoryStack;
 
 import javax.imageio.ImageIO;
-import com.mojang.blaze3d.platform.InputConstants;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
@@ -79,7 +77,7 @@ public class ParadiseClient implements ModInitializer, ClientModInitializer {
   private void updateIcon() {
     MINECRAFT_CLIENT.execute(() -> {
       try (MemoryStack stack = MemoryStack.stackPush()) {
-        long windowHandle = MINECRAFT_CLIENT.getWindow().getWindow();
+        long windowHandle = MINECRAFT_CLIENT.getWindow().handle();
 
         GLFWImage.Buffer icons = GLFWImage.malloc(2, stack);
 
@@ -121,14 +119,16 @@ public class ParadiseClient implements ModInitializer, ClientModInitializer {
   }
 
   private void setupKeyBindings() {
-    KeyMapping keyBinding = KeyBindingHelper.registerKeyBinding(new KeyMapping("Open paradise command",
+    KeyMapping.Category category =
+      KeyMapping.Category.register(Identifier.fromNamespaceAndPath("paradiseclient", "main"));
+    KeyMapping keyBinding = KeyMappingHelper.registerKeyMapping(new KeyMapping("Open paradise command",
       InputConstants.Type.KEYSYM,
       GLFW.GLFW_KEY_COMMA,
-      Constants.MOD_NAME));
+      category));
 
     ClientTickEvents.END_CLIENT_TICK.register(client -> {
       while (keyBinding.consumeClick()) {
-        client.setScreen(new ChatScreen(COMMAND_MANAGER.prefix));
+        client.gui.setScreen(new ChatScreen(COMMAND_MANAGER.prefix, false));
       }
     });
   }
@@ -191,7 +191,8 @@ public class ParadiseClient implements ModInitializer, ClientModInitializer {
   public void registerChannel(String channelName) {
     String nameSpace = channelName.split(":")[0];
     String id = channelName.split(":")[1];
-    PayloadTypeRegistry.playC2S().register(new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(nameSpace, id)), DummyPacket.CODEC);
+    PayloadTypeRegistry.serverboundPlay()
+      .register(new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(nameSpace, id)), DummyPacket.CODEC);
   }
 
   @Override public void onInitialize() {

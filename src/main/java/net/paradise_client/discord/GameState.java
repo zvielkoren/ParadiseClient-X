@@ -40,7 +40,7 @@ public class GameState {
       case IN_GAME_SINGLEPLAYER:
       case PAUSED_SINGLEPLAYER:
         if (client.level != null && client.level.dimension() != null) {
-          String worldName = client.level.dimension().location().toString();
+          String worldName = client.level.dimension().identifier().toString();
           return state.getDisplayName() + " - " + worldName;
         }
         break;
@@ -59,24 +59,32 @@ public class GameState {
    * @return The State enum representing the current game state
    */
   public static State getGameStateEnum(Minecraft client) {
-    if (client.screen != null) {
-      if (client.screen instanceof TitleScreen) {
-        return State.MAIN_MENU;
-      }
-      if (client.screen instanceof JoinMultiplayerScreen) {
-        return State.MULTIPLAYER;
-      }
-      if (client.screen instanceof SelectWorldScreen) {
-        return State.SINGLEPLAYER;
-      }
-      if (client.screen instanceof PauseScreen) {
-        return client.getCurrentServer() != null ? State.PAUSED_MULTIPLAYER : State.PAUSED_SINGLEPLAYER;
-      }
-      if (client.screen instanceof DisconnectedScreen) {
-        return State.DISCONNECTED;
-      }
-      if (client.screen instanceof ConnectScreen) {
-        return State.CONNECTING;
+    // i dont know why intelij says gui is not null
+    if (client.gui == null) {
+      return State.UNKNOWN;
+    }
+    if (client.gui.screen() != null) {
+      switch (client.gui.screen()) {
+        case TitleScreen _ -> {
+          return State.MAIN_MENU;
+        }
+        case JoinMultiplayerScreen _ -> {
+          return State.MULTIPLAYER;
+        }
+        case SelectWorldScreen _ -> {
+          return State.SINGLEPLAYER;
+        }
+        case PauseScreen _ -> {
+          return client.getCurrentServer() != null ? State.PAUSED_MULTIPLAYER : State.PAUSED_SINGLEPLAYER;
+        }
+        case DisconnectedScreen _ -> {
+          return State.DISCONNECTED;
+        }
+        case ConnectScreen _ -> {
+          return State.CONNECTING;
+        }
+        default -> {
+        }
       }
 
       // If we have a screen but it's not one of the above, check if we're in-game

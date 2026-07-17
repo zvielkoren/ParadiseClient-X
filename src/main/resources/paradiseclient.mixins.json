@@ -13,7 +13,7 @@
     "auth.SessionMixin",
     "chat.ChatInputSuggestorMixin",
     "etc.ClientPlayerEntityMixin",
-    "gui.InGameHudMixin",
+    "gui.HudMixin",
     "gui.RotatingCubeMapRendererMixin",
     "gui.screen.AddServerScreenMixin",
     "gui.screen.DirectConnectScreenMixin",

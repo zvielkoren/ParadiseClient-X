@@ -1,17 +1,12 @@
 package net.paradise_client.inject.mixin.gui.screen;
 
 import com.mojang.realmsclient.gui.screens.RealmsNotificationsScreen;
-import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.*;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.LogoRenderer;
-import net.minecraft.client.gui.components.PlainTextButton;
-import net.minecraft.client.gui.components.SplashRenderer;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.*;
+import net.minecraft.client.gui.screens.*;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.Mth;
+import net.minecraft.util.*;
 import net.paradise_client.*;
 import net.paradise_client.wallpaper.*;
 import org.jetbrains.annotations.Nullable;
@@ -19,63 +14,17 @@ import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Mixin class to customize the behavior of the Title Screen in Minecraft.
- * <p>
- * This class modifies the Title Screen to include a custom button recommending the installation of "ViaFabricPlus" and
- * customizes the background fade effect. It also displays additional information about the client and game version.
- * </p>
- *
- * @author SpigotRCE
- * @since 2.9
- */
 @SuppressWarnings("unused") @Mixin(TitleScreen.class) public abstract class TitleScreenMixin extends Screen {
-
-  /**
-   * The splash text renderer used to display splash texts on the Title Screen.
-   */
   @Nullable @Shadow private SplashRenderer splash;
-
-  /**
-   * The Realms Notifications Screen displayed on the Title Screen if active.
-   */
   @Nullable @Shadow private RealmsNotificationsScreen realmsNotificationsScreen;
-
-  /**
-   * Alpha value for the background fade effect on the Title Screen.
-   */
-  @Mutable @Shadow private float panoramaFade;
-
-  /**
-   * Flag indicating whether the background fade effect is enabled.
-   */
-  @Mutable @Shadow private boolean fading;
-
-  /**
-   * The start time for the background fade effect, in milliseconds.
-   */
-  @Mutable @Shadow private long fadeInStart;
-
-  /**
-   * The logo drawer used to render the logo on the Title Screen.
-   */
+  @Shadow private boolean fading;
+  @Shadow private long fadeInStart;
   @Final @Shadow private LogoRenderer logoRenderer;
 
-  /**
-   * Constructs a new instance of the TitleScreenMixin.
-   *
-   * @param title The title of the screen.
-   */
   protected TitleScreenMixin(Component title) {
     super(title);
   }
 
-  /**
-   * Injects a custom button into the Title Screen if "viafabricplus" is not loaded. The button directs the user to a
-   * URL for installation.
-   *
-   * @param ci Callback information.
-   */
   @Inject(method = "init", at = @At(value = "TAIL")) public void init(CallbackInfo ci) {
     Component updateMessage1 = Helper.parseColoredText("&2Current version: &1" +
       Constants.VERSION +
@@ -90,13 +39,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
         updateMessage1,
         (button) -> {
           Util.getPlatform().openUri("https://paradise-client.net/downloads");
-          Minecraft.getInstance().setScreen(new TitleScreen());
+          Minecraft.getInstance().gui.setScreen(new TitleScreen());
         },
         this.font));
     }
 
-    // Adding a button to switch themes dynamically
-    // This button toggles between "hack" and "particle" themes
     Theme currentTheme = ThemeRenderer.getTheme();
 
     this.addRenderableWidget(Button.builder(Component.literal("Theme: " + currentTheme.getName()), onPress -> {
@@ -106,76 +53,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
       ThemeRenderer.setTheme(nextTheme);
       onPress.setMessage(Component.literal("Theme: " + nextTheme.getName()));
     }).width(150).pos(this.width / 2 - 75, this.height / 4 + 160).build());
-
   }
 
-  /**
-   * Renders the Title Screen with custom background and additional information. This method handles background fading
-   * and custom text rendering.
-   *
-   * @param context The draw context used for rendering.
-   * @param mouseX  The mouse X position.
-   * @param mouseY  The mouse Y position.
-   * @param delta   The delta time since the last frame.
-   * @param ci      Callback information.
-   */
-  @Inject(method = "render", at = @At("HEAD"), cancellable = true) public void render(GuiGraphics context,
-    int mouseX,
-    int mouseY,
-    float delta,
-    CallbackInfo ci) {
-    if (this.fadeInStart == 0L && this.fading) {
-      this.fadeInStart = Util.getMillis();
-    }
-
-    float f = 1.0F;
+  @Inject(method = "extractRenderState",
+    at = @At(value = "INVOKE",
+      target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;text(Lnet/minecraft/client/gui/Font;Ljava/lang/String;III)V"))
+  public void renderCustomText(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+    float widgetFade = 1.0F;
     if (this.fading) {
-      float g = (float) (Util.getMillis() - this.fadeInStart) / 2000.0F;
-      if (g > 1.0F) {
-        this.fading = false;
-        this.panoramaFade = 1.0F;
-      } else {
-        g = Mth.clamp(g, 0.0F, 1.0F);
-        f = Mth.clampedMap(g, 0.5F, 1.0F, 0.0F, 1.0F);
-        this.panoramaFade = Mth.clampedMap(g, 0.0F, 0.5F, 0.0F, 1.0F);
-      }
-
-      this.fadeWidgets(f);
+      float fade = (float) (Util.getMillis() - this.fadeInStart) / 2000.0F;
+      fade = Mth.clamp(fade, 0.0F, 1.0F);
+      widgetFade = Mth.clampedMap(fade, 0.5F, 1.0F, 0.0F, 1.0F);
     }
-
-    this.renderPanorama(context, delta);
-    int i = Mth.ceil(f * 255.0F) << 24;
-    if ((i & -67108864) != 0) {
-      super.render(context, mouseX, mouseY, delta);
-      this.logoRenderer.renderLogo(context, this.width, f);
-      if (this.splash != null) {
-        if (!(Boolean) this.minecraft.options.hideSplashTexts().get()) {
-          this.splash.render(context, this.width, this.font, i);
-        }
-      }
-      context.drawString(this.font, Constants.windowTitle, 2, this.height - 10, 16777215 | i);
-      if (this.realmsNotificationsEnabled() && f >= 1.0F) {
-        this.realmsNotificationsScreen.render(context, mouseX, mouseY, delta);
-      }
-    }
-    super.render(context, mouseX, mouseY, delta);
-    ci.cancel();
-  }
-
-  /**
-   * Sets the alpha value for widgets. This method is shadowed from the original TitleScreen class.
-   *
-   * @param alpha The alpha value to set.
-   */
-  @Shadow private void fadeWidgets(float alpha) {
-  }
-
-  /**
-   * Checks if the Realms Notifications GUI is displayed. This method is shadowed from the original TitleScreen class.
-   *
-   * @return True if the Realms Notifications GUI is displayed, false otherwise.
-   */
-  @Shadow private boolean realmsNotificationsEnabled() {
-    return false;
+    graphics.text(this.font, Constants.windowTitle, 2, this.height - 22, ARGB.white(widgetFade));
   }
 }

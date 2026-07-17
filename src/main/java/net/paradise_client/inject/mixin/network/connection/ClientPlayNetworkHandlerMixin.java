@@ -1,10 +1,7 @@
 package net.paradise_client.inject.mixin.network.connection;
 
 import net.minecraft.client.multiplayer.ClientPacketListener;
-import net.minecraft.network.chat.LastSeenMessagesTracker;
-import net.minecraft.network.chat.MessageSignature;
-import net.minecraft.network.chat.SignedMessageBody;
-import net.minecraft.network.chat.SignedMessageChain;
+import net.minecraft.network.chat.*;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 import net.minecraft.network.protocol.game.ServerboundChatPacket;
 import net.minecraft.resources.ResourceKey;
@@ -59,13 +56,13 @@ public abstract class ClientPlayNetworkHandlerMixin implements ClientPlayNetwork
 
     Helper.printChatMessage("");
     Helper.printChatMessage("&b&l[World Info]");
-    Helper.printChatMessage("&7 - Dimension: &f" + packet.commonPlayerSpawnInfo().dimension().location());
+    Helper.printChatMessage("&7 - Dimension: &f" + packet.commonPlayerSpawnInfo().dimension().identifier());
     Helper.printChatMessage("&7 - Hashed Seed: &f" + packet.commonPlayerSpawnInfo().seed());
 
     Helper.printChatMessage("");
     Helper.printChatMessage("&b&l[Server Dimensions]");
     for (ResourceKey<Level> dimension : packet.levels()) {
-      Helper.printChatMessage("&7 - &f" + dimension.location());
+      Helper.printChatMessage("&7 - &f" + dimension.identifier());
     }
 
     Helper.printChatMessage("");
@@ -99,7 +96,7 @@ public abstract class ClientPlayNetworkHandlerMixin implements ClientPlayNetwork
 
     if (content.startsWith(ParadiseClient.COMMAND_MANAGER.prefix)) {
       ParadiseClient.COMMAND_MANAGER.dispatch(content.substring(1));
-      ParadiseClient.MINECRAFT_CLIENT.gui.getChat().addRecentChat(content);
+      ParadiseClient.MINECRAFT_CLIENT.gui.chatListener().handleOverlay(Component.literal(content));
       ci.cancel();
     }
   }

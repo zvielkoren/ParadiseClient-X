@@ -32,8 +32,8 @@ public class PlayersCommand extends Command {
       Map<String, PlayerData> playerDataMap = new HashMap<>();
 
       getMinecraftClient().getConnection().getOnlinePlayers().forEach(playerInfo -> {
-        String playerName = playerInfo.getProfile().getName();
-        String playerUUID = playerInfo.getProfile().getId().toString();
+        String playerName = playerInfo.getProfile().name();
+        String playerUUID = playerInfo.getProfile().id().toString();
         String playerGamemode = playerInfo.getGameMode().name();
         int playerPing = playerInfo.getLatency();
         PlayerData playerData = new PlayerData(playerName, playerUUID, playerGamemode, playerPing);
@@ -41,11 +41,10 @@ public class PlayersCommand extends Command {
       });
 
       if (playerDataMap.isEmpty()) {
-        getMinecraftClient().player.displayClientMessage(Helper.parseColoredText("No players"), true);
+        Helper.printChatMessage(Helper.parseColoredText("No players"));
       }
 
-      playerDataMap.forEach((name, playerData) -> getMinecraftClient().player.displayClientMessage(playerData.getMessage(),
-        false));
+      playerDataMap.forEach((name, playerData) -> Helper.printChatMessage(playerData.getMessage()));
       return SINGLE_SUCCESS;
     });
   }

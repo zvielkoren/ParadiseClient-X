@@ -1,7 +1,6 @@
 package net.paradise_client.ui.notification;
 
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.*;
 import net.minecraft.util.Mth;
 
 public class Notification {
@@ -29,7 +28,7 @@ public class Notification {
     this.startTime = System.currentTimeMillis();
   }
 
-  public boolean draw(GuiGraphics ctx, Font tr, int slot) {
+  public boolean draw(GuiGraphicsExtractor ctx, Font tr, int slot) {
     long elapsed = System.currentTimeMillis() - startTime;
 
     float pLife = Mth.clamp(elapsed / (float) LIFETIME, 0f, 1f);
@@ -82,11 +81,11 @@ public class Notification {
     ctx.fill(x + 2, y + 2, x + width + 2, y + height + 2, shadow);
 
     ctx.fill(x, y, x + width, y + height - BAR_HEIGHT, bg);
-    ctx.renderOutline(x, y, width, height - BAR_HEIGHT, border);
+    ctx.outline(x, y, width, height - BAR_HEIGHT, border);
 
     int txtClr = argb(alphaMul, 0xFFFFFF);
-    ctx.drawString(tr, title, x + PADDING_X, y + PADDING_Y, txtClr, false);
-    ctx.drawString(tr, message, x + PADDING_X, y + PADDING_Y + tr.lineHeight + 2, txtClr, false);
+    ctx.text(tr, title, x + PADDING_X, y + PADDING_Y, txtClr, false);
+    ctx.text(tr, message, x + PADDING_X, y + PADDING_Y + tr.lineHeight + 2, txtClr, false);
 
     float barFrac = 1f - pLife;
     int barW = (int) (width * barFrac);

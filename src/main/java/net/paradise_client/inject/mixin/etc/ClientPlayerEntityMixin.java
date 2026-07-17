@@ -11,13 +11,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
   @Inject(method = "tick", at = @At("TAIL")) public void tick(CallbackInfo ci) {
     Component msg;
     while ((msg = ParadiseClient.MISC_MOD.delayedMessages.poll()) != null) {
-      this.displayClientMessage(msg, false);
+      this.sendSystemMessage(msg);
     }
   }
 
-  @Shadow public abstract void displayClientMessage(Component message, boolean overlay);
-
-  @Unique private void displayClientMessage(Component message) {
-    this.displayClientMessage(message, false);
-  }
+  @Shadow public abstract void sendSystemMessage(Component message);
 }

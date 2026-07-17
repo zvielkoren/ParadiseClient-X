@@ -24,6 +24,6 @@ import java.util.ArrayList;
    * The registered channels by their names.
    */
   public ArrayList<String> getRegisteredChannelsByName() {
-    return ((PayloadTypeRegistryImplAccessor) PayloadTypeRegistry.playC2S()).paradiseClient$getRegisteredChannelsByName();
+    return ((PayloadTypeRegistryImplAccessor) PayloadTypeRegistry.serverboundPlay()).paradiseClient$getRegisteredChannelsByName();
   }
 }

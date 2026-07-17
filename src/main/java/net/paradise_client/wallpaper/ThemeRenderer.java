@@ -1,9 +1,9 @@
 package net.paradise_client.wallpaper;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.*;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 import net.paradise_client.*;
 
@@ -29,7 +29,7 @@ public class ThemeRenderer {
    * Renders the background according to the current theme. Switches between themes and calls the appropriate render
    * method.
    */
-  public static void render(GuiGraphics context, int width, int height) {
+  public static void render(GuiGraphicsExtractor context, int width, int height) {
     switch (getTheme()) {
       case MATRIX:
         renderMatrix(context, width, height);
@@ -54,11 +54,11 @@ public class ThemeRenderer {
   /**
    * Renders the "Matrix" style theme with falling characters.
    */
-  public static void renderMatrix(GuiGraphics context, int width, int height) {
+  public static void renderMatrix(GuiGraphicsExtractor context, int width, int height) {
     context.fillGradient(0, 0, width, height, 0xCC000000, 0xCC000000); // Black gradient background
     for (int i = 0; i < drops.length; i++) {
       String text = Helper.generateRandomString(1, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", random);
-      context.drawString(Minecraft.getInstance().font, text, i * 10, drops[i] * 10, 0x00FF00, false);
+      context.text(Minecraft.getInstance().font, text, i * 10, drops[i] * 10, 0x00FF00, false);
 
       if (drops[i] * 10 > height && random.nextDouble() > 0.975) {
         drops[i] = 0;
@@ -67,7 +67,7 @@ public class ThemeRenderer {
     }
   }
 
-  public static void renderElegantBackground(GuiGraphics context, int width, int height) {
+  public static void renderElegantBackground(GuiGraphicsExtractor context, int width, int height) {
     // Check if the window size has changed
     if (width != lastWidth || height != lastHeight) {
       regenerateParticles(width, height);
@@ -85,9 +85,9 @@ public class ThemeRenderer {
     }
   }
 
-  public static void renderLegacy(GuiGraphics context, int width, int height) {
-    context.blit(RenderType::guiTextured,
-      ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "textures/wallpaper/wallpaper.png"),
+  public static void renderLegacy(GuiGraphicsExtractor context, int width, int height) {
+    context.blit(RenderPipelines.GUI_TEXTURED,
+      Identifier.fromNamespaceAndPath(Constants.MOD_ID, "textures/wallpaper/wallpaper.png"),
       0,
       0,
       0.0F,

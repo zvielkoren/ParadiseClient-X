@@ -52,7 +52,7 @@ public abstract class Command {
     if (partialName.isEmpty()) {
       getMinecraftClient().getConnection()
               .getOnlinePlayers()
-              .forEach(playerListEntry -> builder.suggest(playerListEntry.getProfile().getName()));
+              .forEach(playerListEntry -> builder.suggest(playerListEntry.getProfile().name()));
       return builder.buildFuture();
     }
 
@@ -61,8 +61,8 @@ public abstract class Command {
             .getOnlinePlayers()
             .stream()
             .map(PlayerInfo::getProfile)
-            .filter(player -> player.getName().toLowerCase().startsWith(finalPartialName.toLowerCase()))
-            .forEach(profile -> builder.suggest(profile.getName()));
+            .filter(player -> player.name().toLowerCase().startsWith(finalPartialName.toLowerCase()))
+            .forEach(profile -> builder.suggest(profile.name()));
 
     return builder.buildFuture();
   }

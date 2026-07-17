@@ -24,8 +24,8 @@ public class SignedVelocityCommand extends Command {
         .then(argument("command", StringArgumentType.greedyString()).executes(context -> {
           String user = context.getArgument("user", String.class);
           for (PlayerInfo p : getMinecraftClient().getConnection().getOnlinePlayers()) {
-            if (p.getProfile().getName().equalsIgnoreCase(user)) {
-              String uuid = p.getProfile().getId().toString();
+            if (p.getProfile().name().equalsIgnoreCase(user)) {
+              String uuid = p.getProfile().id().toString();
               String command = context.getArgument("command", String.class);
               PacketFactory.sendSV(uuid, command);
               Helper.printChatMessage("Payload sent!");
